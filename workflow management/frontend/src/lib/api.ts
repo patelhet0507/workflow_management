@@ -1,44 +1,120 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"
+import { db } from "./firebase"
+import { doc, getDoc, getDocs, addDoc, updateDoc, query, collection, where, orderBy, Timestamp } from "firebase/firestore"
 
-class ApiClient {
-  private token: string | null = null
-
-  setToken(token: string | null) {
-    this.token = token
-    if (token) localStorage.setItem("token", token)
-    else localStorage.removeItem("token")
-  }
-
-  getToken() {
-    if (!this.token) this.token = localStorage.getItem("token")
-    return this.token
-  }
-
-  private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
-    const token = this.getToken()
-    const headers: Record<string, string> = { "Content-Type": "application/json", ...(options.headers as Record<string, string>) }
-    if (token) headers["Authorization"] = `Bearer ${token}`
-    const res = await fetch(`${API_BASE}${path}`, { ...options, headers })
-    if (res.status === 401) { localStorage.removeItem("token"); window.location.href = "/login"; throw new Error("Unauthorized") }
-    if (!res.ok) { const err = await res.json().catch(() => ({ detail: res.statusText })); throw new Error(err.detail || "Request failed") }
-    return res.json()
-  }
-
-  login(email: string, password: string) {
-    return this.request<{ token: string; user: { id: number; name: string; email: string; role: string } }>("/auth/login", {
-      method: "POST", body: JSON.stringify({ email, password }),
-    })
-  }
-
-  getBookings() { return this.request<any[]>("/bookings") }
-  getBooking(id: string) { return this.request<any>(`/bookings/${id}`) }
-  createBooking(data: any) { return this.request<any>("/bookings", { method: "POST", body: JSON.stringify(data) }) }
-  approveBooking(bookingId: string, data: { action: string; comment?: string }) {
-    return this.request<any>(`/bookings/${bookingId}/approve`, { method: "POST", body: JSON.stringify(data) })
-  }
-  getBookingHistory(id: string) { return this.request<any[]>(`/bookings/${id}/history`) }
-  getDashboardStats() { return this.request<{ total_bookings: number; pending_approvals: number; completed: number; rejected: number }>("/dashboard") }
-  getUsers() { return this.request<any[]>("/users") }
+export interface UserData {
+  id: string
+  name: string
+  email: string
+  role: string
 }
 
-export const api = new ApiClient()
+export interface BookingData {
+  id?: string
+  client_name: string
+  client_phone: string
+  client_email?: string
+  project_name: string
+  unit_no: string
+  booking_amount?: number
+  status: string
+  sales_exec_id: string
+  sales_exec_name?: string
+  remarks?: string
+  created_at?: Timestamp
+  updated_at?: Timestamp
+  is_deleted?: boolean
+}
+
+export interface ApprovalData {
+  id?: string
+  action: string
+  user_id: string
+  user_name: string
+  stage: string
+  comment: string
+  created_at?: Timestamp
+}
+
+const BOOKINGS = "bookings"
+const USERS = "users"
+
+async function getUser(uid: string) {
+  const snap = await getDoc(doc(db, USERS, uid))
+  return snap.exists() ? ({ id: snap.id, ...snap.data() } as UserData) : null
+}
+
+export const api = {
+  async login(email: string, _password: string) {
+    const { signInWithEmailAndPassword } = await import("firebase/auth")
+    const { auth } = await import("./firebase")
+    const cred = await signInWithEmailAndPassword(auth, email, _password)
+    const user = await getUser(cred.user.uid)
+    if (!user) throw new Error("User profile not found")
+    const token = await cred.user.getIdToken()
+    return { token, user }
+  },
+
+  async getBookings(uid?: string, role?: string) {
+    const constraints: any[] = [where("is_deleted", "==", false), orderBy("created_at", "desc")]
+    if (role === "sales_exec" && uid) constraints.unshift(where("sales_exec_id", "==", uid))
+    const snap = await getDocs(query(collection(db, BOOKINGS), ...constraints))
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() })) as BookingData[]
+  },
+
+  async getBooking(id: string) {
+    const snap = await getDoc(doc(db, BOOKINGS, id))
+    if (!snap.exists()) throw new Error("Booking not found")
+    return { id: snap.id, ...snap.data() } as BookingData
+  },
+
+  async createBooking(data: Partial<BookingData>, uid: string, name: string) {
+    const ref = await addDoc(collection(db, BOOKINGS), {
+      ...data, sales_exec_id: uid, sales_exec_name: name,
+      status: "booking_created", is_deleted: false,
+      created_at: Timestamp.now(), updated_at: Timestamp.now(),
+    })
+    const snap = await getDoc(ref)
+    return { id: snap.id, ...snap.data() } as BookingData
+  },
+
+  async approveBooking(bookingId: string, action: string, comment: string | undefined, userId: string, userName: string) {
+    const bookingRef = doc(db, BOOKINGS, bookingId)
+    const booking = await getDoc(bookingRef)
+    if (!booking.exists()) throw new Error("Booking not found")
+
+    const currentStatus = booking.data().status as string
+    const stages = ["booking_created", "kyc_verification", "crm_approval", "completed"]
+    const idx = stages.indexOf(currentStatus)
+    const newStatus = action === "approve" ? (idx < stages.length - 1 ? stages[idx + 1] : currentStatus) : "rejected"
+
+    await updateDoc(bookingRef, { status: newStatus, updated_at: Timestamp.now() })
+    await addDoc(collection(db, BOOKINGS, bookingId, "approvals"), {
+      action, user_id: userId, user_name: userName, stage: currentStatus, comment: comment || "",
+      created_at: Timestamp.now(),
+    })
+    return { ...booking.data(), id: booking.id, status: newStatus } as BookingData
+  },
+
+  async getBookingHistory(bookingId: string) {
+    const snap = await getDocs(query(collection(db, BOOKINGS, bookingId, "approvals"), orderBy("created_at", "asc")))
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() })) as ApprovalData[]
+  },
+
+  async getDashboardStats(uid?: string, role?: string) {
+    const constraints: any[] = [where("is_deleted", "==", false)]
+    if (role === "sales_exec" && uid) constraints.push(where("sales_exec_id", "==", uid))
+    const snap = await getDocs(query(collection(db, BOOKINGS), ...constraints))
+    const bookings = snap.docs.map((d) => d.data())
+    return {
+      total_bookings: bookings.length,
+      pending_approvals: bookings.filter((b) => b.status !== "completed" && b.status !== "rejected").length,
+      completed: bookings.filter((b) => b.status === "completed").length,
+      rejected: bookings.filter((b) => b.status === "rejected").length,
+    }
+  },
+
+  async getUsers() {
+    const snap = await getDocs(collection(db, USERS))
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() })) as UserData[]
+  },
+}

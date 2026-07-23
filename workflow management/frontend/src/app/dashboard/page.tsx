@@ -13,7 +13,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!isLoading && !user) return void router.push("/login")
-    if (user) api.getDashboardStats().then(setStats).catch(console.error)
+    if (user) api.getDashboardStats(user.id, user.role).then(setStats).catch(console.error)
   }, [user, isLoading, router])
 
   if (isLoading || !user) return null

@@ -1,0 +1,9 @@
+.aider*
+__pycache__/
+*.pyc
+.env
+*.db
+node_modules/
+.next/
+dev-server*.log
+dev.log

@@ -23,7 +23,8 @@ export default function NewBookingPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    try { await api.createBooking({ ...form, booking_amount: parseFloat(form.booking_amount) }); router.push("/bookings") }
+    if (!user) return
+    try { await api.createBooking({ ...form, booking_amount: parseFloat(form.booking_amount) }, user.id, user.name); router.push("/bookings") }
     catch (err: any) { setError(err.message) }
   }
 

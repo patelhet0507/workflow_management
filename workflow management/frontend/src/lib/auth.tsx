@@ -1,58 +1,52 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react"
-import { api } from "./api"
-
-export interface User {
-  id: number
-  name: string
-  email: string
-  role: string
-}
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import { onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth"
+import { doc, getDoc } from "firebase/firestore"
+import { auth, db } from "./firebase"
+import { api, type UserData } from "./api"
 
 interface AuthContextType {
-  user: User | null
-  token: string | null
-  login: (email: string, password: string) => Promise<void>
-  logout: () => void
+  user: UserData | null
   isLoading: boolean
+  login: (email: string, password: string) => Promise<void>
+  logout: () => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextType>({} as AuthContextType)
+const AuthContext = createContext<AuthContextType>(null!)
+
+function useUserDoc(uid: string) {
+  return getDoc(doc(db, "users", uid)).then((s) => (s.exists() ? ({ id: s.id, ...s.data() } as UserData) : null))
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [token, setToken] = useState<string | null>(null)
+  const [user, setUser] = useState<UserData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const t = localStorage.getItem("token")
-    const u = localStorage.getItem("user")
-    if (t && u) {
-      setToken(t)
-      setUser(JSON.parse(u))
-      api.setToken(t)
-    }
-    setIsLoading(false)
+    const unsub = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        const u = await useUserDoc(fbUser.uid)
+        setUser(u)
+      } else {
+        setUser(null)
+      }
+      setIsLoading(false)
+    })
+    return unsub
   }, [])
 
   const login = async (email: string, password: string) => {
-    const res = await api.login(email, password)
-    api.setToken(res.token)
-    setToken(res.token)
-    setUser(res.user)
-    localStorage.setItem("user", JSON.stringify(res.user))
+    const result = await api.login(email, password)
+    setUser(result.user)
   }
 
-  const logout = () => {
-    api.setToken(null)
-    setToken(null)
+  const logout = async () => {
+    await firebaseSignOut(auth)
     setUser(null)
-    localStorage.removeItem("user")
-    window.location.href = "/login"
   }
 
-  return <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, isLoading, login, logout }}>{children}</AuthContext.Provider>
 }
 
 export const useAuth = () => useContext(AuthContext)

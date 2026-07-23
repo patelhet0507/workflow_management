@@ -35,7 +35,8 @@ export default function BookingDetailPage() {
 
   const handleApprove = async (action: string) => {
     setError("")
-    try { await api.approveBooking(id, { action, comment }); load() }
+    if (!user) return
+    try { await api.approveBooking(id, action, comment, user.id, user.name); load() }
     catch (err: any) { setError(err.message) }
   }
 

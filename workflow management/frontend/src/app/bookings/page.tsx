@@ -20,7 +20,7 @@ export default function BookingsPage() {
 
   useEffect(() => {
     if (!isLoading && !user) return void router.push("/login")
-    if (user) api.getBookings().then(setBookings).catch(console.error)
+    if (user) api.getBookings(user.id, user.role).then(setBookings).catch(console.error)
   }, [user, isLoading, router])
 
   if (isLoading || !user) return null
