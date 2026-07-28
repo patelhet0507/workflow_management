@@ -8,11 +8,19 @@ import AppLayout from "@/components/app-layout"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-const steps = ["booking_created", "kyc_verification", "crm_approval", "completed"]
+const STAGES = [
+  { status: "booking_created", label: "Booking Created", role: "KYC" },
+  { status: "kyc_approved", label: "KYC Approved", role: "CRM" },
+  { status: "crm_approved", label: "CRM Approved", role: "CSO" },
+  { status: "cso_approved", label: "CSO Approved", role: "Management" },
+  { status: "completed", label: "Completed", role: null },
+]
+
 const statusColors: Record<string, "default" | "secondary" | "success" | "destructive" | "outline"> = {
-  booking_created: "secondary", kyc_verification: "default", crm_approval: "outline", completed: "success", rejected: "destructive",
+  booking_created: "secondary", kyc_approved: "default", crm_approved: "outline", cso_approved: "default", completed: "success", rejected: "destructive",
 }
 
 const fieldLabels: Record<string, string> = {
@@ -23,7 +31,7 @@ const fieldLabels: Record<string, string> = {
 }
 
 export default function BookingDetailPage() {
-  const { user, isLoading } = useAuth()
+  const { user, isLoading, verifyPassword } = useAuth()
   const router = useRouter()
   const params = useParams()
   const id = params?.id as string
@@ -31,6 +39,10 @@ export default function BookingDetailPage() {
   const [history, setHistory] = useState<any[]>([])
   const [comment, setComment] = useState("")
   const [error, setError] = useState("")
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [pendingAction, setPendingAction] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmError, setConfirmError] = useState("")
 
   const load = () => {
     if (!id || !user) return
@@ -40,17 +52,40 @@ export default function BookingDetailPage() {
 
   useEffect(() => { if (!isLoading && !user) router.push("/login"); else load() }, [user, isLoading, router, id])
 
-  const handleApprove = async (action: string) => {
-    setError("")
-    if (!user) return
-    try { await api.approveBooking(id, action, comment, user.id, user.name); load() }
-    catch (err: any) { setError(err.message) }
+  const confirmAndApprove = async (action: string) => {
+    setConfirmError("")
+    try {
+      await verifyPassword(password)
+      if (!user) return
+      await api.approveBooking(id, action, comment, user.id, user.name, user.role)
+      setConfirmOpen(false)
+      setPassword("")
+      setComment("")
+      load()
+    } catch (err: any) {
+      if (err.code === "auth/wrong-password" || err.message?.includes("wrong-password") || err.message?.includes("invalid-credential")) {
+        setConfirmError("Incorrect password")
+      } else {
+        setConfirmError(err.message || "Verification failed")
+      }
+    }
+  }
+
+  const canApprove = (): { allowed: boolean; reason?: string } => {
+    if (!user || !booking) return { allowed: false }
+    if (booking.status === "completed" || booking.status === "rejected") return { allowed: false, reason: "Booking already finalized" }
+    const stageRole = STAGES.find((s) => s.status === booking.status)?.role
+    if (!stageRole) return { allowed: false, reason: "Cannot approve at this stage" }
+    if (user.role === "super_admin") return { allowed: true }
+    if (user.role !== stageRole) return { allowed: false, reason: `Only ${stageRole} can approve at this stage` }
+    return { allowed: true }
   }
 
   if (isLoading || !user || !booking) return null
 
-  const stepIndex = steps.indexOf(booking.status)
-  const progress = booking.status === "rejected" ? 0 : booking.status === "completed" ? 100 : Math.max(0, stepIndex) * 33
+  const currentIdx = STAGES.findIndex((s) => s.status === booking.status)
+  const progress = booking.status === "rejected" ? 0 : booking.status === "completed" ? 100 : Math.max(0, currentIdx) * 25
+  const approval = canApprove()
 
   const fields = [
     { key: "client_name", span: true },
@@ -74,10 +109,11 @@ export default function BookingDetailPage() {
         <div className="mb-6 bg-white dark:bg-gray-900 rounded-lg p-4 ring-1 ring-gray-200 dark:ring-gray-800">
           <Progress value={progress} className="h-2" />
           <div className="flex justify-between text-xs text-gray-400 mt-1.5">
-            <span className={stepIndex >= 0 ? "text-blue-600 font-medium" : ""}>Created</span>
-            <span className={stepIndex >= 1 ? "text-blue-600 font-medium" : ""}>KYC</span>
-            <span className={stepIndex >= 2 ? "text-blue-600 font-medium" : ""}>CRM</span>
-            <span className={stepIndex >= 3 ? "text-blue-600 font-medium" : ""}>Done</span>
+            {STAGES.map((s, i) => (
+              <span key={s.status} className={i <= currentIdx && booking.status !== "rejected" ? "text-blue-600 font-medium" : ""}>
+                {s.role || s.label}
+              </span>
+            ))}
           </div>
         </div>
 
@@ -107,12 +143,35 @@ export default function BookingDetailPage() {
               <textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Add a comment (optional)..."
                 className="mb-3 flex min-h-[60px] w-full rounded-md border border-gray-200 dark:border-gray-700 bg-transparent px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
               {error && <p className="text-sm text-red-500 mb-2">{error}</p>}
-              <div className="flex gap-2">
-                <Button onClick={() => handleApprove("approve")} className="bg-blue-600 hover:bg-blue-700">Approve</Button>
-                <Button variant="destructive" onClick={() => handleApprove("reject")}>Reject</Button>
-              </div>
+              {!approval.allowed && approval.reason && (
+                <p className="text-sm text-gray-500 mb-2 italic">{approval.reason}</p>
+              )}
+              {approval.allowed && (
+                <div className="flex gap-2">
+                  <Button onClick={() => { setPendingAction("approve"); setConfirmOpen(true) }} className="bg-blue-600 hover:bg-blue-700">Approve</Button>
+                  <Button variant="destructive" onClick={() => { setPendingAction("reject"); setConfirmOpen(true) }}>Reject</Button>
+                </div>
+              )}
             </CardContent>
           </Card>
+        )}
+
+        {/* Password confirmation modal */}
+        {confirmOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+              <h3 className="text-lg font-semibold mb-1 capitalize">{pendingAction} Booking</h3>
+              <p className="text-sm text-gray-500 mb-4">Enter your password to confirm</p>
+              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                placeholder="Your password" className="mb-3 focus:ring-2 focus:ring-blue-500"
+                onKeyDown={(e) => { if (e.key === "Enter") confirmAndApprove(pendingAction) }} autoFocus />
+              {confirmError && <p className="text-sm text-red-500 mb-3">{confirmError}</p>}
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => { setConfirmOpen(false); setPassword(""); setConfirmError("") }}>Cancel</Button>
+                <Button onClick={() => confirmAndApprove(pendingAction)} className="bg-blue-600 hover:bg-blue-700">Confirm</Button>
+              </div>
+            </div>
+          </div>
         )}
 
         <Card className="ring-1 ring-gray-100 dark:ring-gray-800 shadow-sm">
@@ -125,7 +184,7 @@ export default function BookingDetailPage() {
                     <div className={`w-2 h-2 mt-1.5 rounded-full shrink-0 ${h.action === "reject" ? "bg-red-500" : "bg-blue-600"}`} />
                     <div>
                       <p className="font-medium capitalize">{h.action} by {h.user_name || h.user_id}</p>
-                      <p className="text-gray-400 text-xs">{h.created_at ? new Date(h.created_at).toLocaleString() : ""}</p>
+                      <p className="text-gray-400 text-xs">{h.created_at ? new Date(h.created_at.toMillis()).toLocaleString() : ""}</p>
                       {h.comment && <p className="text-gray-500 mt-1">{h.comment}</p>}
                     </div>
                   </div>

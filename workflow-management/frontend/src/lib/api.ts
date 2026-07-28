@@ -1,6 +1,6 @@
 import { auth, db } from "./firebase"
 import { doc, getDoc, getDocs, addDoc, updateDoc, setDoc, query, collection, where, orderBy, Timestamp } from "firebase/firestore"
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth"
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth"
 
 export interface UserData {
   id: string
@@ -42,6 +42,21 @@ const BOOKINGS = "bookings"
 const USERS = "users"
 const SUPER_ADMIN_EMAIL = "patelhet.0507@gmail.com"
 
+const STAGES = ["booking_created", "kyc_approved", "crm_approved", "cso_approved", "completed"]
+
+const STAGE_ROLE: Record<string, string> = {
+  booking_created: "KYC",
+  kyc_approved: "CRM",
+  crm_approved: "CSO",
+  cso_approved: "management",
+}
+
+export async function verifyPassword(password: string) {
+  const user = auth.currentUser
+  if (!user || !user.email) throw new Error("Not authenticated")
+  await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password))
+}
+
 async function getUser(uid: string) {
   const snap = await getDoc(doc(db, USERS, uid))
   return snap.exists() ? ({ id: snap.id, ...snap.data() } as UserData) : null
@@ -73,7 +88,7 @@ export const api = {
 
   async getBookings(uid?: string, role?: string) {
     const constraints: any[] = [where("is_deleted", "==", false)]
-    if ((role === "data_entry" || role === "sales_exec") && uid) constraints.push(where("sales_exec_id", "==", uid))
+    if (role === "data_entry" && uid) constraints.push(where("sales_exec_id", "==", uid))
     const snap = await getDocs(query(collection(db, BOOKINGS), ...constraints))
     const bookings = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as BookingData[]
     bookings.sort((a, b) => ((b.created_at?.toMillis() ?? 0) - (a.created_at?.toMillis() ?? 0)))
@@ -97,15 +112,22 @@ export const api = {
     return { id: snap.id, ...snap.data() } as BookingData
   },
 
-  async approveBooking(bookingId: string, action: string, comment: string | undefined, userId: string, userName: string) {
+  async approveBooking(bookingId: string, action: string, comment: string | undefined, userId: string, userName: string, userRole: string) {
     const bookingRef = doc(db, BOOKINGS, bookingId)
     const booking = await getDoc(bookingRef)
     if (!booking.exists()) throw new Error("Booking not found")
 
     const currentStatus = booking.data().status as string
-    const stages = ["booking_created", "kyc_verification", "crm_approval", "completed"]
-    const idx = stages.indexOf(currentStatus)
-    const newStatus = action === "approve" ? (idx < stages.length - 1 ? stages[idx + 1] : currentStatus) : "rejected"
+    if (currentStatus === "completed" || currentStatus === "rejected") throw new Error("Booking already finalized")
+
+    if (action === "approve") {
+      const requiredRole = STAGE_ROLE[currentStatus]
+      if (!requiredRole) throw new Error("Cannot approve at this stage")
+      if (userRole !== requiredRole && userRole !== "super_admin") throw new Error(`Only ${requiredRole} can approve at this stage`)
+    }
+
+    const idx = STAGES.indexOf(currentStatus)
+    const newStatus = action === "approve" ? (idx < STAGES.length - 1 ? STAGES[idx + 1] : currentStatus) : "rejected"
 
     await updateDoc(bookingRef, { status: newStatus, updated_at: Timestamp.now() })
     await addDoc(collection(db, BOOKINGS, bookingId, "approvals"), {
@@ -122,7 +144,7 @@ export const api = {
 
   async getDashboardStats(uid?: string, role?: string) {
     const constraints: any[] = [where("is_deleted", "==", false)]
-    if ((role === "data_entry" || role === "sales_exec") && uid) constraints.push(where("sales_exec_id", "==", uid))
+    if (role === "data_entry" && uid) constraints.push(where("sales_exec_id", "==", uid))
     const snap = await getDocs(query(collection(db, BOOKINGS), ...constraints))
     const bookings = snap.docs.map((d) => d.data())
     return {

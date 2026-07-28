@@ -13,11 +13,11 @@ import Link from "next/link"
 
 const roles = [
   { value: "data_entry", label: "Data Entry" },
-  { value: "sales_exec", label: "Sales Exec" },
-  { value: "crm", label: "CRM" },
+  { value: "KYC", label: "KYC" },
+  { value: "CRM", label: "CRM" },
+  { value: "CSO", label: "CSO" },
   { value: "management", label: "Management" },
-  { value: "finance", label: "Finance" },
-  { value: "super_admin", label: "Admin" },
+  { value: "super_admin", label: "Super Admin" },
 ]
 
 export default function AdminPage() {

@@ -15,7 +15,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/bookings", label: "Bookings", icon: ClipboardList },
-    { href: "/bookings/new", label: "New Booking", icon: Plus },
+    ...(user?.role === "data_entry" || user?.role === "super_admin" ? [{ href: "/bookings/new", label: "New Booking", icon: Plus }] : []),
     ...(user?.role === "super_admin" ? [{ href: "/admin", label: "Admin", icon: Shield }] : []),
   ]
 

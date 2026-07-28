@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth"
 import { doc, getDoc } from "firebase/firestore"
 import { auth, db } from "./firebase"
-import { api, type UserData } from "./api"
+import { api, verifyPassword, type UserData } from "./api"
 
 interface AuthContextType {
   user: UserData | null
@@ -12,6 +12,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>
   register: (email: string, password: string, name: string, role: string) => Promise<void>
   logout: () => Promise<void>
+  verifyPassword: (password: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>(null!)
@@ -57,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }
 
-  return <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, isLoading, login, register, logout, verifyPassword }}>{children}</AuthContext.Provider>
 }
 
 export const useAuth = () => useContext(AuthContext)
