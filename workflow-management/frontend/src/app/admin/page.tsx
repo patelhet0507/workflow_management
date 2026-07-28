@@ -113,18 +113,10 @@ export default function AdminPage() {
               <div className="space-y-1"><Label>Password</Label><Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} placeholder="Min 6 characters" className="focus:ring-2 focus:ring-blue-500" /></div>
               <div className="space-y-2">
                 <Label>Role</Label>
-                <div className="flex flex-wrap gap-1.5">
-                  {roles.map((r) => (
-                    <button key={r.value} type="button" onClick={() => setNewRole(r.value)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                        newRole === r.value
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-blue-400"
-                      }`}>
-                      {r.label}
-                    </button>
-                  ))}
-                </div>
+                <select value={newRole} onChange={(e) => setNewRole(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-1 text-sm shadow-sm">
+                  {roles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                </select>
               </div>
               <Button type="submit" className="bg-blue-600 hover:bg-blue-700">Add User</Button>
               {msg && <p className="text-sm text-blue-600 bg-blue-50 dark:bg-blue-950/50 px-3 py-2 rounded-md">{msg}</p>}
@@ -147,7 +139,7 @@ export default function AdminPage() {
               <div className="space-y-1">
                 <Label className="text-xs">Approved By</Label>
                 <select value={newStageRole} onChange={(e) => setNewStageRole(e.target.value)}
-                  className="flex h-9 w-32 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
+                  className="flex h-9 w-32 rounded-md border border-input bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-1 text-sm shadow-sm">
                   {roles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                 </select>
               </div>
@@ -198,18 +190,10 @@ export default function AdminPage() {
                       <td className="p-2 font-medium">{u.name}</td>
                       <td className="p-2 text-gray-500">{u.email}</td>
                       <td className="p-2">
-                        <div className="flex flex-wrap gap-1">
-                          {roles.map((r) => (
-                            <button key={r.value} onClick={() => changeRole(u.id, r.value)}
-                              className={`px-2 py-0.5 rounded text-[11px] font-medium border transition-colors ${
-                                u.role === r.value
-                                  ? "bg-blue-600 text-white border-blue-600"
-                                  : "bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-blue-400"
-                              }`}>
-                              {r.label}
-                            </button>
-                          ))}
-                        </div>
+                        <select value={u.role} onChange={(e) => changeRole(u.id, e.target.value)}
+                          className="h-8 rounded border border-input bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2 text-xs">
+                          {roles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                        </select>
                       </td>
                     </tr>
                   ))}

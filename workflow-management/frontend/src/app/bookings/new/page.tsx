@@ -13,22 +13,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 const paymentPlans = ["Full Payment", "Installment (6 months)", "Installment (12 months)", "Installment (24 months)", "Construction Linked"]
 const bookingSources = ["Walk-in", "Agent", "Referral", "Online", "Phone Inquiry", "Other"]
 
-function ChipGroup({ options, value, onChange, label }: { options: string[]; value: string; onChange: (v: string) => void; label: string }) {
+function SelectField({ options, value, onChange, label }: { options: string[]; value: string; onChange: (v: string) => void; label: string }) {
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      <div className="flex flex-wrap gap-1.5">
-        {options.map((opt) => (
-          <button key={opt} type="button" onClick={() => onChange(opt)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-              value === opt
-                ? "bg-blue-600 text-white border-blue-600"
-                : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-blue-400"
-            }`}>
-            {opt}
-          </button>
-        ))}
-      </div>
+      <select value={value} onChange={(e) => onChange(e.target.value)}
+        className="flex h-9 w-full rounded-md border border-input bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-1 text-sm shadow-sm">
+        <option value="">Select...</option>
+        {options.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+      </select>
     </div>
   )
 }
@@ -44,7 +37,7 @@ export default function NewBookingPage() {
 
   useEffect(() => { if (!isLoading && !user) router.push("/login") }, [user, isLoading, router])
 
-  const handleChange = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
+  const handleChange = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm({ ...form, [key]: e.target.value })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -89,8 +82,8 @@ export default function NewBookingPage() {
                 <div className="space-y-2"><Label>SD Value (?)</Label>
                   <Input type="number" value={form.sd_value} onChange={handleChange("sd_value")} placeholder="0" className="focus:ring-2 focus:ring-blue-500" /></div>
               </div>
-              <ChipGroup options={paymentPlans} value={form.payment_plan} onChange={(v) => setForm({ ...form, payment_plan: v })} label="Payment Plan" />
-              <ChipGroup options={bookingSources} value={form.source_of_booking} onChange={(v) => setForm({ ...form, source_of_booking: v })} label="Source of Booking" />
+              <SelectField options={paymentPlans} value={form.payment_plan} onChange={(v) => setForm({ ...form, payment_plan: v })} label="Payment Plan" />
+              <SelectField options={bookingSources} value={form.source_of_booking} onChange={(v) => setForm({ ...form, source_of_booking: v })} label="Source of Booking" />
               {error && <p className="text-sm text-red-500 bg-red-50 dark:bg-red-950/50 px-3 py-2 rounded-md">{error}</p>}
               <div className="flex gap-3 pt-2">
                 <Button type="submit" className="bg-blue-600 hover:bg-blue-700">Create Booking</Button>
