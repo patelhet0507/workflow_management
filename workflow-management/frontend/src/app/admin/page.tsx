@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowUp, ArrowDown, Save } from "lucide-react"
+import { ArrowUp, ArrowDown, Save, Plus, X } from "lucide-react"
 
 const roles = [
   { value: "data_entry", label: "Data Entry" },
@@ -33,6 +33,8 @@ export default function AdminPage() {
   const [flow, setFlow] = useState<StageDef[]>([])
   const [flowMsg, setFlowMsg] = useState("")
   const [saving, setSaving] = useState(false)
+  const [newStageStatus, setNewStageStatus] = useState("")
+  const [newStageRole, setNewStageRole] = useState("KYC")
 
   const isAdmin = user?.role === "admin" || user?.role === "super_admin"
 
@@ -69,6 +71,16 @@ export default function AdminPage() {
     copy[next] = tmp
     setFlow(copy)
   }
+
+  const addStage = () => {
+    const s = newStageStatus.trim()
+    if (!s) return
+    if (flow.some((x) => x.status === s)) return
+    setFlow([...flow, { status: s, role: newStageRole }])
+    setNewStageStatus("")
+  }
+
+  const removeStage = (idx: number) => setFlow(flow.filter((_, i) => i !== idx))
 
   const saveFlow = async () => {
     setSaving(true)
@@ -125,7 +137,23 @@ export default function AdminPage() {
             <CardTitle className="text-lg">Approval Flow</CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
-            <p className="text-sm text-gray-500 mb-4">Reorder the approval stages. Each stage maps a booking status to the role that can approve it.</p>
+            <p className="text-sm text-gray-500 mb-4">Add, remove, or reorder approval stages. Each stage maps a booking status to the role that can approve it.</p>
+
+            <div className="flex items-end gap-2 mb-6 max-w-lg">
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs">Status Name</Label>
+                <Input value={newStageStatus} onChange={(e) => setNewStageStatus(e.target.value)} placeholder="e.g. compliance_approved" className="focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Approved By</Label>
+                <select value={newStageRole} onChange={(e) => setNewStageRole(e.target.value)}
+                  className="flex h-9 w-32 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
+                  {roles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                </select>
+              </div>
+              <Button onClick={addStage} size="sm" className="mb-0.5 bg-blue-600 hover:bg-blue-700"><Plus className="w-4 h-4 mr-1" /> Add</Button>
+            </div>
+
             <div className="space-y-2 max-w-lg">
               {flow.map((s, i) => (
                 <div key={s.status} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700">
@@ -138,6 +166,7 @@ export default function AdminPage() {
                   <div className="flex gap-1">
                     <button onClick={() => moveStage(i, -1)} disabled={i === 0} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30"><ArrowUp className="w-4 h-4" /></button>
                     <button onClick={() => moveStage(i, 1)} disabled={i === flow.length - 1} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30"><ArrowDown className="w-4 h-4" /></button>
+                    <button onClick={() => removeStage(i)} className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-950/50 text-gray-400 hover:text-red-600"><X className="w-4 h-4" /></button>
                   </div>
                 </div>
               ))}
