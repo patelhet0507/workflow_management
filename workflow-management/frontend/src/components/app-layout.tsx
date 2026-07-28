@@ -3,7 +3,7 @@
 import { ReactNode } from "react"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth"
-import { Building2, LayoutDashboard, ClipboardList, LogOut, Menu, X, Plus } from "lucide-react"
+import { Building2, LayoutDashboard, ClipboardList, LogOut, Menu, X, Plus, Shield } from "lucide-react"
 import { useState } from "react"
 
 export default function AppLayout({ children }: { children: ReactNode }) {
@@ -14,6 +14,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/bookings", label: "Bookings", icon: ClipboardList },
     { href: "/bookings/new", label: "New Booking", icon: Plus },
+    ...(user?.role === "super_admin" ? [{ href: "/admin", label: "Admin", icon: Shield }] : []),
   ]
 
   return (
@@ -34,7 +35,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t dark:border-gray-800">
           <div className="text-sm mb-2">
             <p className="font-medium">{user?.name || user?.email}</p>
-            <p className="text-gray-500 text-xs capitalize">{user?.role}</p>
+            <p className="text-gray-500 text-xs capitalize">{user?.role?.replace("_", " ")}</p>
           </div>
           <button onClick={logout} className="flex items-center gap-2 text-sm text-gray-500 hover:text-red-600 transition-colors w-full">
             <LogOut className="h-4 w-4" /> Sign Out

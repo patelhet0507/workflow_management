@@ -11,12 +11,14 @@ export interface UserData {
 
 export interface BookingData {
   id?: string
-  client_name: string
-  client_phone: string
-  client_email?: string
+  client_confirmation_date?: string
+  onboarding_date?: string
   project_name: string
   unit_no: string
-  booking_amount?: number
+  client_name: string
+  sd_value?: number
+  payment_plan?: string
+  source_of_booking?: string
   status: string
   sales_exec_id: string
   sales_exec_name?: string
@@ -38,6 +40,7 @@ export interface ApprovalData {
 
 const BOOKINGS = "bookings"
 const USERS = "users"
+const SUPER_ADMIN_EMAIL = "patelhet.0507@gmail.com"
 
 async function getUser(uid: string) {
   const snap = await getDoc(doc(db, USERS, uid))
@@ -49,7 +52,7 @@ export const api = {
     const cred = await signInWithEmailAndPassword(auth, email, password)
     let user = await getUser(cred.user.uid)
     if (!user) {
-      user = { id: cred.user.uid, name: cred.user.displayName || email.split("@")[0], email, role: "sales_exec" }
+      user = { id: cred.user.uid, name: cred.user.displayName || email.split("@")[0], email, role: "data_entry" }
       await setDoc(doc(db, USERS, cred.user.uid), user)
     }
     const token = await cred.user.getIdToken()
@@ -58,14 +61,19 @@ export const api = {
 
   async register(email: string, password: string, name: string, role: string) {
     const cred = await createUserWithEmailAndPassword(auth, email, password)
-    const user = { id: cred.user.uid, name, email, role }
+    const finalRole = email.toLowerCase() === SUPER_ADMIN_EMAIL ? "super_admin" : role
+    const user = { id: cred.user.uid, name, email, role: finalRole }
     await setDoc(doc(db, USERS, cred.user.uid), user)
     return { token: await cred.user.getIdToken(), user }
   },
 
+  async updateUserRole(uid: string, role: string) {
+    await updateDoc(doc(db, USERS, uid), { role })
+  },
+
   async getBookings(uid?: string, role?: string) {
     const constraints: any[] = [where("is_deleted", "==", false), orderBy("created_at", "desc")]
-    if (role === "sales_exec" && uid) constraints.unshift(where("sales_exec_id", "==", uid))
+    if ((role === "data_entry" || role === "sales_exec") && uid) constraints.unshift(where("sales_exec_id", "==", uid))
     const snap = await getDocs(query(collection(db, BOOKINGS), ...constraints))
     return snap.docs.map((d) => ({ id: d.id, ...d.data() })) as BookingData[]
   },
@@ -76,7 +84,8 @@ export const api = {
     return { id: snap.id, ...snap.data() } as BookingData
   },
 
-  async createBooking(data: Partial<BookingData>, uid: string, name: string) {
+  async createBooking(data: Partial<BookingData>, uid: string, name: string, role: string) {
+    if (role !== "data_entry" && role !== "super_admin") throw new Error("Only data entry users can create bookings")
     const ref = await addDoc(collection(db, BOOKINGS), {
       ...data, sales_exec_id: uid, sales_exec_name: name,
       status: "booking_created", is_deleted: false,
@@ -111,7 +120,7 @@ export const api = {
 
   async getDashboardStats(uid?: string, role?: string) {
     const constraints: any[] = [where("is_deleted", "==", false)]
-    if (role === "sales_exec" && uid) constraints.push(where("sales_exec_id", "==", uid))
+    if ((role === "data_entry" || role === "sales_exec") && uid) constraints.push(where("sales_exec_id", "==", uid))
     const snap = await getDocs(query(collection(db, BOOKINGS), ...constraints))
     const bookings = snap.docs.map((d) => d.data())
     return {

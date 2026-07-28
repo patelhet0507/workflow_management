@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 const roles = [
+  { value: "data_entry", label: "Data Entry" },
   { value: "sales_exec", label: "Sales Executive" },
   { value: "crm", label: "CRM" },
   { value: "management", label: "Management" },
@@ -23,7 +24,7 @@ export default function RegisterPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState("sales_exec")
+  const [role, setRole] = useState("data_entry")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 

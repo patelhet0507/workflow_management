@@ -14,8 +14,8 @@ function friendlyError(msg: string) {
 }
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("sales@example.com")
-  const [password, setPassword] = useState("sales123")
+  const [email, setEmail] = useState("patelhet.0507@gmail.com")
+  const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const { login } = useAuth()
@@ -55,12 +55,9 @@ export default function LoginPage() {
           <Link href="/register" className="text-blue-600 hover:underline">Create an account</Link>
         </p>
         <div className="mt-6 text-xs text-gray-400 space-y-1 border-t pt-4 dark:border-gray-800">
-          <p className="font-medium">Demo accounts (must exist in Firebase):</p>
-          <p>admin@example.com / admin123 (Admin)</p>
-          <p>sales@example.com / sales123 (Sales Exec)</p>
-          <p>crm@example.com / crm123 (CRM)</p>
-          <p>management@example.com / mgmt123 (Management)</p>
-          <p>finance@example.com / finance123 (Finance)</p>
+          <p className="font-medium">Roles:</p>
+          <p>data_entry - Can create bookings</p>
+          <p>super_admin - Full access, admin panel</p>
         </div>
       </div>
     </div>

@@ -60,9 +60,13 @@ export default function BookingDetailPage() {
         </div>
         <div className="grid grid-cols-2 gap-4 mb-6">
           <Card><CardHeader><CardTitle className="text-sm">Project</CardTitle></CardHeader><CardContent><p>{booking.project_name}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm">Unit</CardTitle></CardHeader><CardContent><p>{booking.unit_no || "-"}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm">Amount</CardTitle></CardHeader><CardContent><p>₹{Number(booking.booking_amount || 0).toLocaleString()}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm">Contact</CardTitle></CardHeader><CardContent><p>{booking.client_email}<br />{booking.client_phone}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-sm">Unit No</CardTitle></CardHeader><CardContent><p>{booking.unit_no || "-"}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-sm">Client Confirmation</CardTitle></CardHeader><CardContent><p>{booking.client_confirmation_date || "-"}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-sm">Onboarding</CardTitle></CardHeader><CardContent><p>{booking.onboarding_date || "-"}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-sm">SD Value</CardTitle></CardHeader><CardContent><p>{Number(booking.sd_value || 0).toLocaleString()}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-sm">Payment Plan</CardTitle></CardHeader><CardContent><p>{booking.payment_plan || "-"}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-sm">Source</CardTitle></CardHeader><CardContent><p>{booking.source_of_booking || "-"}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-sm">Created By</CardTitle></CardHeader><CardContent><p>{booking.sales_exec_name || booking.sales_exec_id}</p></CardContent></Card>
         </div>
         {booking.remarks && <Card className="mb-6"><CardHeader><CardTitle className="text-sm">Remarks</CardTitle></CardHeader><CardContent><p>{booking.remarks}</p></CardContent></Card>}
         {booking.status !== "completed" && booking.status !== "rejected" && (

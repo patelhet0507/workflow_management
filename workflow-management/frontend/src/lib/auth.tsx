@@ -26,13 +26,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
-      if (fbUser) {
-        const u = await useUserDoc(fbUser.uid)
-        setUser(u)
-      } else {
+      try {
+        if (fbUser) {
+          const u = await useUserDoc(fbUser.uid)
+          setUser(u)
+        } else {
+          setUser(null)
+        }
+      } catch {
         setUser(null)
+      } finally {
+        setIsLoading(false)
       }
-      setIsLoading(false)
     })
     return unsub
   }, [])
