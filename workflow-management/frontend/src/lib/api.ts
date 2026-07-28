@@ -72,10 +72,12 @@ export const api = {
   },
 
   async getBookings(uid?: string, role?: string) {
-    const constraints: any[] = [where("is_deleted", "==", false), orderBy("created_at", "desc")]
-    if ((role === "data_entry" || role === "sales_exec") && uid) constraints.unshift(where("sales_exec_id", "==", uid))
+    const constraints: any[] = [where("is_deleted", "==", false)]
+    if ((role === "data_entry" || role === "sales_exec") && uid) constraints.push(where("sales_exec_id", "==", uid))
     const snap = await getDocs(query(collection(db, BOOKINGS), ...constraints))
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() })) as BookingData[]
+    const bookings = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as BookingData[]
+    bookings.sort((a, b) => ((b.created_at?.toMillis() ?? 0) - (a.created_at?.toMillis() ?? 0)))
+    return bookings
   },
 
   async getBooking(id: string) {
