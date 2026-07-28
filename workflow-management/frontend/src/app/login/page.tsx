@@ -14,7 +14,7 @@ function friendlyError(msg: string) {
 }
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("patelhet.0507@gmail.com")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
