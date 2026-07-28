@@ -10,7 +10,14 @@ import { Badge } from "@/components/ui/badge"
 import { Search, Plus } from "lucide-react"
 
 const statusColors: Record<string, "default" | "secondary" | "success" | "destructive" | "outline"> = {
-  booking_created: "secondary", kyc_approved: "default", crm_approved: "outline", cso_approved: "default", completed: "success", rejected: "destructive",
+  booking_created: "secondary", completed: "success", rejected: "destructive",
+}
+
+function stageLabel(status: string): string {
+  if (status === "booking_created") return "Created"
+  if (status === "completed") return "Done"
+  if (status === "rejected") return "Rejected"
+  return status.replace(/_/g, " ")
 }
 
 export default function BookingsPage() {
@@ -59,19 +66,15 @@ export default function BookingsPage() {
             <th className="text-left p-3 font-medium text-gray-500"></th>
           </tr></thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {filtered.map((b) => {
-              const stageIdx = ["booking_created", "kyc_approved", "crm_approved", "cso_approved", "completed"].indexOf(b.status)
-              const stageLabel = stageIdx >= 0 ? ["Created", "KYC", "CRM", "CSO", "Done"][stageIdx] : b.status
-              return (
-                <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
-                  <td className="p-3 font-medium">{b.client_name}</td>
-                  <td className="p-3 text-gray-600 dark:text-gray-400">{b.project_name}</td>
-                  <td className="p-3"><Badge variant={statusColors[b.status] || "outline"}>{stageLabel}</Badge></td>
-                  <td className="p-3 text-gray-600 dark:text-gray-400">{b.payment_plan || "-"}</td>
-                  <td className="p-3"><Link href={`/bookings/${b.id}`} className="text-blue-600 hover:text-blue-700 text-xs font-medium">View →</Link></td>
-                </tr>
-              )
-            })}
+            {filtered.map((b) => (
+              <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+                <td className="p-3 font-medium">{b.client_name}</td>
+                <td className="p-3 text-gray-600 dark:text-gray-400">{b.project_name}</td>
+                <td className="p-3"><Badge variant={statusColors[b.status] || "outline"}>{stageLabel(b.status)}</Badge></td>
+                <td className="p-3 text-gray-600 dark:text-gray-400">{b.payment_plan || "-"}</td>
+                <td className="p-3"><Link href={`/bookings/${b.id}`} className="text-blue-600 hover:text-blue-700 text-xs font-medium">View →</Link></td>
+              </tr>
+            ))}
             {filtered.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-gray-400">No bookings found</td></tr>}
           </tbody>
         </table>

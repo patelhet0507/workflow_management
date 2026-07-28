@@ -16,6 +16,7 @@ const roles = [
   { value: "CRM", label: "CRM" },
   { value: "CSO", label: "CSO" },
   { value: "management", label: "Management" },
+  { value: "admin", label: "Admin" },
   { value: "super_admin", label: "Super Admin" },
 ]
 

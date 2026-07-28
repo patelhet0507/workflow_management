@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { useAuth } from "@/lib/auth"
-import { api } from "@/lib/api"
+import { api, type StageDef } from "@/lib/api"
 import AppLayout from "@/components/app-layout"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -11,16 +11,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-const STAGES = [
-  { status: "booking_created", label: "Booking Created", role: "KYC" },
-  { status: "kyc_approved", label: "KYC Approved", role: "CRM" },
-  { status: "crm_approved", label: "CRM Approved", role: "CSO" },
-  { status: "cso_approved", label: "CSO Approved", role: "Management" },
-  { status: "completed", label: "Completed", role: null },
-]
-
 const statusColors: Record<string, "default" | "secondary" | "success" | "destructive" | "outline"> = {
-  booking_created: "secondary", kyc_approved: "default", crm_approved: "outline", cso_approved: "default", completed: "success", rejected: "destructive",
+  booking_created: "secondary", completed: "success", rejected: "destructive",
 }
 
 const fieldLabels: Record<string, string> = {
@@ -37,6 +29,7 @@ export default function BookingDetailPage() {
   const id = params?.id as string
   const [booking, setBooking] = useState<any>(null)
   const [history, setHistory] = useState<any[]>([])
+  const [flow, setFlow] = useState<StageDef[]>([])
   const [comment, setComment] = useState("")
   const [error, setError] = useState("")
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -46,8 +39,11 @@ export default function BookingDetailPage() {
 
   const load = () => {
     if (!id || !user) return
-    api.getBooking(id).then(setBooking).catch(console.error)
-    api.getBookingHistory(id).then(setHistory).catch(console.error)
+    Promise.all([
+      api.getBooking(id),
+      api.getBookingHistory(id),
+      api.getApprovalFlow(),
+    ]).then(([b, h, f]) => { setBooking(b); setHistory(h); setFlow(f) }).catch(console.error)
   }
 
   useEffect(() => { if (!isLoading && !user) router.push("/login"); else load() }, [user, isLoading, router, id])
@@ -74,17 +70,18 @@ export default function BookingDetailPage() {
   const canApprove = (): { allowed: boolean; reason?: string } => {
     if (!user || !booking) return { allowed: false }
     if (booking.status === "completed" || booking.status === "rejected") return { allowed: false, reason: "Booking already finalized" }
-    const stageRole = STAGES.find((s) => s.status === booking.status)?.role
-    if (!stageRole) return { allowed: false, reason: "Cannot approve at this stage" }
+    const stage = flow.find((s) => s.status === booking.status)
+    if (!stage) return { allowed: false, reason: "Cannot approve at this stage" }
     if (user.role === "super_admin") return { allowed: true }
-    if (user.role !== stageRole) return { allowed: false, reason: `Only ${stageRole} can approve at this stage` }
+    if (user.role !== stage.role) return { allowed: false, reason: `Only ${stage.role} can approve at this stage` }
     return { allowed: true }
   }
 
   if (isLoading || !user || !booking) return null
 
-  const currentIdx = STAGES.findIndex((s) => s.status === booking.status)
-  const progress = booking.status === "rejected" ? 0 : booking.status === "completed" ? 100 : Math.max(0, currentIdx) * 25
+  const stages = [{ status: "booking_created", role: "Created" }, ...flow, { status: "completed", role: "Completed" }]
+  const currentIdx = stages.findIndex((s) => s.status === booking.status)
+  const progress = booking.status === "rejected" ? 0 : booking.status === "completed" ? 100 : Math.max(0, currentIdx) * (100 / (stages.length - 1))
   const approval = canApprove()
 
   const fields = [
@@ -109,9 +106,9 @@ export default function BookingDetailPage() {
         <div className="mb-6 bg-white dark:bg-gray-900 rounded-lg p-4 ring-1 ring-gray-200 dark:ring-gray-800">
           <Progress value={progress} className="h-2" />
           <div className="flex justify-between text-xs text-gray-400 mt-1.5">
-            {STAGES.map((s, i) => (
+            {stages.map((s, i) => (
               <span key={s.status} className={i <= currentIdx && booking.status !== "rejected" ? "text-blue-600 font-medium" : ""}>
-                {s.role || s.label}
+                {s.role}
               </span>
             ))}
           </div>
@@ -156,7 +153,6 @@ export default function BookingDetailPage() {
           </Card>
         )}
 
-        {/* Password confirmation modal */}
         {confirmOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">

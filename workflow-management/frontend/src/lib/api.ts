@@ -38,17 +38,26 @@ export interface ApprovalData {
   created_at?: Timestamp
 }
 
+export interface StageDef {
+  status: string
+  role: string
+}
+
 const BOOKINGS = "bookings"
 const USERS = "users"
 const SUPER_ADMIN_EMAIL = "patelhet.0507@gmail.com"
 
-const STAGES = ["booking_created", "kyc_approved", "crm_approved", "cso_approved", "completed"]
+const DEFAULT_FLOW: StageDef[] = [
+  { status: "booking_created", role: "KYC" },
+  { status: "kyc_approved", role: "CRM" },
+  { status: "crm_approved", role: "CSO" },
+  { status: "cso_approved", role: "management" },
+]
 
-const STAGE_ROLE: Record<string, string> = {
-  booking_created: "KYC",
-  kyc_approved: "CRM",
-  crm_approved: "CSO",
-  cso_approved: "management",
+async function getFlowConfig(): Promise<StageDef[]> {
+  const snap = await getDoc(doc(db, "config", "approval_flow"))
+  if (snap.exists()) return (snap.data().stages as StageDef[]) || DEFAULT_FLOW
+  return DEFAULT_FLOW
 }
 
 export async function verifyPassword(password: string) {
@@ -63,6 +72,14 @@ async function getUser(uid: string) {
 }
 
 export const api = {
+  async getApprovalFlow() {
+    return getFlowConfig()
+  },
+
+  async updateApprovalFlow(stages: StageDef[]) {
+    await setDoc(doc(db, "config", "approval_flow"), { stages })
+  },
+
   async login(email: string, password: string) {
     const cred = await signInWithEmailAndPassword(auth, email, password)
     let user = await getUser(cred.user.uid)
@@ -113,28 +130,28 @@ export const api = {
   },
 
   async approveBooking(bookingId: string, action: string, comment: string | undefined, userId: string, userName: string, userRole: string) {
-    const bookingRef = doc(db, BOOKINGS, bookingId)
-    const booking = await getDoc(bookingRef)
-    if (!booking.exists()) throw new Error("Booking not found")
+    const [flow, bookingSnap] = await Promise.all([getFlowConfig(), getDoc(doc(db, BOOKINGS, bookingId))])
+    if (!bookingSnap.exists()) throw new Error("Booking not found")
 
-    const currentStatus = booking.data().status as string
+    const currentStatus = bookingSnap.data().status as string
     if (currentStatus === "completed" || currentStatus === "rejected") throw new Error("Booking already finalized")
 
     if (action === "approve") {
-      const requiredRole = STAGE_ROLE[currentStatus]
-      if (!requiredRole) throw new Error("Cannot approve at this stage")
-      if (userRole !== requiredRole && userRole !== "super_admin") throw new Error(`Only ${requiredRole} can approve at this stage`)
+      const stage = flow.find((s) => s.status === currentStatus)
+      if (!stage) throw new Error("Cannot approve at this stage")
+      if (userRole !== stage.role && userRole !== "super_admin") throw new Error(`Only ${stage.role} can approve at this stage`)
     }
 
-    const idx = STAGES.indexOf(currentStatus)
-    const newStatus = action === "approve" ? (idx < STAGES.length - 1 ? STAGES[idx + 1] : currentStatus) : "rejected"
+    const statuses = ["booking_created", ...flow.map((s) => s.status), "completed"]
+    const idx = statuses.indexOf(currentStatus)
+    const newStatus = action === "approve" ? (idx < statuses.length - 1 ? statuses[idx + 1] : currentStatus) : "rejected"
 
-    await updateDoc(bookingRef, { status: newStatus, updated_at: Timestamp.now() })
+    await updateDoc(doc(db, BOOKINGS, bookingId), { status: newStatus, updated_at: Timestamp.now() })
     await addDoc(collection(db, BOOKINGS, bookingId, "approvals"), {
       action, user_id: userId, user_name: userName, stage: currentStatus, comment: comment || "",
       created_at: Timestamp.now(),
     })
-    return { ...booking.data(), id: booking.id, status: newStatus } as BookingData
+    return { ...bookingSnap.data(), id: bookingSnap.id, status: newStatus } as BookingData
   },
 
   async getBookingHistory(bookingId: string) {
