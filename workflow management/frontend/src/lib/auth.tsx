@@ -10,6 +10,7 @@ interface AuthContextType {
   user: UserData | null
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
+  register: (email: string, password: string, name: string, role: string) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -41,12 +42,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(result.user)
   }
 
+  const register = async (email: string, password: string, name: string, role: string) => {
+    const result = await api.register(email, password, name, role)
+    setUser(result.user)
+  }
+
   const logout = async () => {
     await firebaseSignOut(auth)
     setUser(null)
   }
 
-  return <AuthContext.Provider value={{ user, isLoading, login, logout }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>{children}</AuthContext.Provider>
 }
 
 export const useAuth = () => useContext(AuthContext)

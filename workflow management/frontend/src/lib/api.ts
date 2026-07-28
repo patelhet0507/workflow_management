@@ -1,5 +1,6 @@
-import { db } from "./firebase"
-import { doc, getDoc, getDocs, addDoc, updateDoc, query, collection, where, orderBy, Timestamp } from "firebase/firestore"
+import { auth, db } from "./firebase"
+import { doc, getDoc, getDocs, addDoc, updateDoc, setDoc, query, collection, where, orderBy, Timestamp } from "firebase/firestore"
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth"
 
 export interface UserData {
   id: string
@@ -44,14 +45,22 @@ async function getUser(uid: string) {
 }
 
 export const api = {
-  async login(email: string, _password: string) {
-    const { signInWithEmailAndPassword } = await import("firebase/auth")
-    const { auth } = await import("./firebase")
-    const cred = await signInWithEmailAndPassword(auth, email, _password)
-    const user = await getUser(cred.user.uid)
-    if (!user) throw new Error("User profile not found")
+  async login(email: string, password: string) {
+    const cred = await signInWithEmailAndPassword(auth, email, password)
+    let user = await getUser(cred.user.uid)
+    if (!user) {
+      user = { id: cred.user.uid, name: cred.user.displayName || email.split("@")[0], email, role: "sales_exec" }
+      await setDoc(doc(db, USERS, cred.user.uid), user)
+    }
     const token = await cred.user.getIdToken()
     return { token, user }
+  },
+
+  async register(email: string, password: string, name: string, role: string) {
+    const cred = await createUserWithEmailAndPassword(auth, email, password)
+    const user = { id: cred.user.uid, name, email, role }
+    await setDoc(doc(db, USERS, cred.user.uid), user)
+    return { token: await cred.user.getIdToken(), user }
   },
 
   async getBookings(uid?: string, role?: string) {

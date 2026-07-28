@@ -2,8 +2,16 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { useAuth } from "@/lib/auth"
 import { Building2 } from "lucide-react"
+
+function friendlyError(msg: string) {
+  if (msg.includes("auth/user-not-found") || msg.includes("auth/invalid-credential")) return "Invalid email or password"
+  if (msg.includes("auth/too-many-requests")) return "Too many attempts. Try again later."
+  if (msg.includes("auth/invalid-email")) return "Invalid email format"
+  return msg
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState("sales@example.com")
@@ -18,7 +26,7 @@ export default function LoginPage() {
     setError("")
     setLoading(true)
     try { await login(email, password); router.push("/dashboard") }
-    catch (err: any) { setError(err.message || "Login failed") }
+    catch (err: any) { setError(friendlyError(err.message || "Login failed")) }
     finally { setLoading(false) }
   }
 
@@ -43,11 +51,16 @@ export default function LoginPage() {
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
+        <p className="text-sm text-center mt-4">
+          <Link href="/register" className="text-blue-600 hover:underline">Create an account</Link>
+        </p>
         <div className="mt-6 text-xs text-gray-400 space-y-1 border-t pt-4 dark:border-gray-800">
-          <p className="font-medium">Demo accounts:</p>
-          <p>admin@example.com / admin123 (Super Admin)</p>
+          <p className="font-medium">Demo accounts (must exist in Firebase):</p>
+          <p>admin@example.com / admin123 (Admin)</p>
           <p>sales@example.com / sales123 (Sales Exec)</p>
           <p>crm@example.com / crm123 (CRM)</p>
+          <p>management@example.com / mgmt123 (Management)</p>
+          <p>finance@example.com / finance123 (Finance)</p>
         </div>
       </div>
     </div>
