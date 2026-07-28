@@ -15,6 +15,13 @@ const statusColors: Record<string, "default" | "secondary" | "success" | "destru
   booking_created: "secondary", kyc_verification: "default", crm_approval: "outline", completed: "success", rejected: "destructive",
 }
 
+const fieldLabels: Record<string, string> = {
+  client_name: "Client Name", project_name: "Project", unit_no: "Unit No",
+  client_confirmation_date: "Confirmation Date", onboarding_date: "Onboarding Date",
+  sd_value: "SD Value", payment_plan: "Payment Plan", source_of_booking: "Source",
+  sales_exec_name: "Created By",
+}
+
 export default function BookingDetailPage() {
   const { user, isLoading } = useAuth()
   const router = useRouter()
@@ -45,54 +52,80 @@ export default function BookingDetailPage() {
   const stepIndex = steps.indexOf(booking.status)
   const progress = booking.status === "rejected" ? 0 : booking.status === "completed" ? 100 : Math.max(0, stepIndex) * 33
 
+  const fields = [
+    { key: "client_name", span: true },
+    { key: "project_name" }, { key: "unit_no" },
+    { key: "client_confirmation_date" }, { key: "onboarding_date" },
+    { key: "sd_value" }, { key: "payment_plan" },
+    { key: "source_of_booking" }, { key: "sales_exec_name" },
+  ]
+
   return (
     <AppLayout>
       <div className="max-w-3xl">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">{booking.client_name}</h1>
-          <Badge variant={statusColors[booking.status] || "outline"} className="text-sm">{booking.status}</Badge>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <span className="w-1 h-6 bg-blue-600 rounded-full inline-block" />
+            {booking.client_name}
+          </h1>
+          <Badge variant={statusColors[booking.status] || "outline"} className="text-sm capitalize">{booking.status.replace(/_/g, " ")}</Badge>
         </div>
-        <div className="mb-6">
+
+        <div className="mb-6 bg-white dark:bg-gray-900 rounded-lg p-4 ring-1 ring-gray-200 dark:ring-gray-800">
           <Progress value={progress} className="h-2" />
-          <div className="flex justify-between text-xs text-gray-500 mt-1">
-            <span>Created</span><span>KYC</span><span>CRM</span><span>Done</span>
+          <div className="flex justify-between text-xs text-gray-400 mt-1.5">
+            <span className={stepIndex >= 0 ? "text-blue-600 font-medium" : ""}>Created</span>
+            <span className={stepIndex >= 1 ? "text-blue-600 font-medium" : ""}>KYC</span>
+            <span className={stepIndex >= 2 ? "text-blue-600 font-medium" : ""}>CRM</span>
+            <span className={stepIndex >= 3 ? "text-blue-600 font-medium" : ""}>Done</span>
           </div>
         </div>
+
         <div className="grid grid-cols-2 gap-4 mb-6">
-          <Card><CardHeader><CardTitle className="text-sm">Project</CardTitle></CardHeader><CardContent><p>{booking.project_name}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm">Unit No</CardTitle></CardHeader><CardContent><p>{booking.unit_no || "-"}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm">Client Confirmation</CardTitle></CardHeader><CardContent><p>{booking.client_confirmation_date || "-"}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm">Onboarding</CardTitle></CardHeader><CardContent><p>{booking.onboarding_date || "-"}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm">SD Value</CardTitle></CardHeader><CardContent><p>{Number(booking.sd_value || 0).toLocaleString()}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm">Payment Plan</CardTitle></CardHeader><CardContent><p>{booking.payment_plan || "-"}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm">Source</CardTitle></CardHeader><CardContent><p>{booking.source_of_booking || "-"}</p></CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm">Created By</CardTitle></CardHeader><CardContent><p>{booking.sales_exec_name || booking.sales_exec_id}</p></CardContent></Card>
+          {fields.map(({ key, span }) => {
+            const val = booking[key]
+            return (
+              <Card key={key} className={span ? "col-span-2 ring-1 ring-gray-100 dark:ring-gray-800 shadow-sm" : "ring-1 ring-gray-100 dark:ring-gray-800 shadow-sm"}>
+                <CardHeader className="py-2.5 px-4"><CardTitle className="text-xs font-medium text-gray-500 uppercase tracking-wider">{fieldLabels[key] || key}</CardTitle></CardHeader>
+                <CardContent className="px-4 pb-3"><p className="text-sm font-medium">{key === "sd_value" && val ? Number(val).toLocaleString() : (val || "-")}</p></CardContent>
+              </Card>
+            )
+          })}
         </div>
-        {booking.remarks && <Card className="mb-6"><CardHeader><CardTitle className="text-sm">Remarks</CardTitle></CardHeader><CardContent><p>{booking.remarks}</p></CardContent></Card>}
+
+        {booking.remarks && (
+          <Card className="mb-6 ring-1 ring-gray-100 dark:ring-gray-800 shadow-sm">
+            <CardHeader className="py-2.5 px-4"><CardTitle className="text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</CardTitle></CardHeader>
+            <CardContent className="px-4 pb-3"><p className="text-sm">{booking.remarks}</p></CardContent>
+          </Card>
+        )}
+
         {booking.status !== "completed" && booking.status !== "rejected" && (
-          <Card className="mb-6">
-            <CardHeader><CardTitle className="text-sm">Approval Action</CardTitle></CardHeader>
-            <CardContent>
-              <textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Comment (optional)" className="mb-3 flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm" />
+          <Card className="mb-6 ring-1 ring-gray-100 dark:ring-gray-800 shadow-sm">
+            <CardHeader className="py-2.5 px-4"><CardTitle className="text-xs font-medium text-gray-500 uppercase tracking-wider">Approval Action</CardTitle></CardHeader>
+            <CardContent className="px-4 pb-4">
+              <textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Add a comment (optional)..."
+                className="mb-3 flex min-h-[60px] w-full rounded-md border border-gray-200 dark:border-gray-700 bg-transparent px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
               {error && <p className="text-sm text-red-500 mb-2">{error}</p>}
               <div className="flex gap-2">
-                <Button onClick={() => handleApprove("approve")}>Approve</Button>
+                <Button onClick={() => handleApprove("approve")} className="bg-blue-600 hover:bg-blue-700">Approve</Button>
                 <Button variant="destructive" onClick={() => handleApprove("reject")}>Reject</Button>
               </div>
             </CardContent>
           </Card>
         )}
-        <Card>
-          <CardHeader><CardTitle className="text-sm">Approval History</CardTitle></CardHeader>
-          <CardContent>
-            {history.length === 0 ? <p className="text-sm text-gray-500">No history yet</p> : (
+
+        <Card className="ring-1 ring-gray-100 dark:ring-gray-800 shadow-sm">
+          <CardHeader className="py-2.5 px-4"><CardTitle className="text-xs font-medium text-gray-500 uppercase tracking-wider">Approval History</CardTitle></CardHeader>
+          <CardContent className="px-4 pb-4">
+            {history.length === 0 ? <p className="text-sm text-gray-400">No history yet</p> : (
               <div className="space-y-3">
                 {history.map((h: any, i: number) => (
                   <div key={i} className="flex items-start gap-3 text-sm pb-3 border-b last:border-0 dark:border-gray-800">
-                    <div className="w-2 h-2 mt-1.5 rounded-full bg-blue-600 shrink-0" />
+                    <div className={`w-2 h-2 mt-1.5 rounded-full shrink-0 ${h.action === "reject" ? "bg-red-500" : "bg-blue-600"}`} />
                     <div>
-                      <p className="font-medium">{h.action} by {h.user_name || h.user_id}</p>
-                      <p className="text-gray-500 text-xs">{h.created_at ? new Date(h.created_at).toLocaleString() : ""}</p>
+                      <p className="font-medium capitalize">{h.action} by {h.user_name || h.user_id}</p>
+                      <p className="text-gray-400 text-xs">{h.created_at ? new Date(h.created_at).toLocaleString() : ""}</p>
                       {h.comment && <p className="text-gray-500 mt-1">{h.comment}</p>}
                     </div>
                   </div>

@@ -13,6 +13,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 const paymentPlans = ["Full Payment", "Installment (6 months)", "Installment (12 months)", "Installment (24 months)", "Construction Linked"]
 const bookingSources = ["Walk-in", "Agent", "Referral", "Online", "Phone Inquiry", "Other"]
 
+function ChipGroup({ options, value, onChange, label }: { options: string[]; value: string; onChange: (v: string) => void; label: string }) {
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((opt) => (
+          <button key={opt} type="button" onClick={() => onChange(opt)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+              value === opt
+                ? "bg-blue-600 text-white border-blue-600"
+                : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-blue-400"
+            }`}>
+            {opt}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function NewBookingPage() {
   const { user, isLoading } = useAuth()
   const router = useRouter()
@@ -24,7 +44,7 @@ export default function NewBookingPage() {
 
   useEffect(() => { if (!isLoading && !user) router.push("/login") }, [user, isLoading, router])
 
-  const handleChange = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+  const handleChange = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm({ ...form, [key]: e.target.value })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,36 +64,42 @@ export default function NewBookingPage() {
 
   return (
     <AppLayout>
-      <h1 className="text-2xl font-bold mb-6">New Booking</h1>
-      <Card className="max-w-2xl">
-        <CardHeader><CardTitle>Booking Details</CardTitle></CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Client Confirmation Date</Label><Input type="date" value={form.client_confirmation_date} onChange={handleChange("client_confirmation_date")} required /></div>
-              <div className="space-y-2"><Label>Onboarding Date</Label><Input type="date" value={form.onboarding_date} onChange={handleChange("onboarding_date")} required /></div>
-              <div className="space-y-2"><Label>Project Name</Label><Input value={form.project_name} onChange={handleChange("project_name")} required /></div>
-              <div className="space-y-2"><Label>Unit No</Label><Input value={form.unit_no} onChange={handleChange("unit_no")} required /></div>
-              <div className="space-y-2"><Label>Client Name</Label><Input value={form.client_name} onChange={handleChange("client_name")} required /></div>
-              <div className="space-y-2"><Label>SD Value</Label><Input type="number" value={form.sd_value} onChange={handleChange("sd_value")} /></div>
-              <div className="space-y-2"><Label>Payment Plan</Label>
-                <select value={form.payment_plan} onChange={handleChange("payment_plan")} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
-                  <option value="">Select...</option>
-                  {paymentPlans.map((p) => <option key={p} value={p}>{p}</option>)}
-                </select>
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
+          <span className="w-1 h-6 bg-blue-600 rounded-full inline-block" />
+          New Booking
+        </h1>
+        <Card className="shadow-md border-0 ring-1 ring-gray-200 dark:ring-gray-800">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-t-lg">
+            <CardTitle className="text-lg">Booking Details</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2"><Label>Client Confirmation Date</Label>
+                  <Input type="date" value={form.client_confirmation_date} onChange={handleChange("client_confirmation_date")} required className="focus:ring-2 focus:ring-blue-500" /></div>
+                <div className="space-y-2"><Label>Onboarding Date</Label>
+                  <Input type="date" value={form.onboarding_date} onChange={handleChange("onboarding_date")} required className="focus:ring-2 focus:ring-blue-500" /></div>
+                <div className="space-y-2"><Label>Project Name</Label>
+                  <Input value={form.project_name} onChange={handleChange("project_name")} required placeholder="e.g. Emerald Towers" className="focus:ring-2 focus:ring-blue-500" /></div>
+                <div className="space-y-2"><Label>Unit No</Label>
+                  <Input value={form.unit_no} onChange={handleChange("unit_no")} required placeholder="e.g. 12A" className="focus:ring-2 focus:ring-blue-500" /></div>
+                <div className="space-y-2"><Label>Client Name</Label>
+                  <Input value={form.client_name} onChange={handleChange("client_name")} required placeholder="Full name" className="focus:ring-2 focus:ring-blue-500" /></div>
+                <div className="space-y-2"><Label>SD Value (?)</Label>
+                  <Input type="number" value={form.sd_value} onChange={handleChange("sd_value")} placeholder="0" className="focus:ring-2 focus:ring-blue-500" /></div>
               </div>
-              <div className="space-y-2"><Label>Source of Booking</Label>
-                <select value={form.source_of_booking} onChange={handleChange("source_of_booking")} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
-                  <option value="">Select...</option>
-                  {bookingSources.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
+              <ChipGroup options={paymentPlans} value={form.payment_plan} onChange={(v) => setForm({ ...form, payment_plan: v })} label="Payment Plan" />
+              <ChipGroup options={bookingSources} value={form.source_of_booking} onChange={(v) => setForm({ ...form, source_of_booking: v })} label="Source of Booking" />
+              {error && <p className="text-sm text-red-500 bg-red-50 dark:bg-red-950/50 px-3 py-2 rounded-md">{error}</p>}
+              <div className="flex gap-3 pt-2">
+                <Button type="submit" className="bg-blue-600 hover:bg-blue-700">Create Booking</Button>
+                <Button type="button" variant="outline" onClick={() => router.push("/bookings")}>Cancel</Button>
               </div>
-            </div>
-            {error && <p className="text-sm text-red-500">{error}</p>}
-            <Button type="submit">Create Booking</Button>
-          </form>
-        </CardContent>
-      </Card>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </AppLayout>
   )
 }

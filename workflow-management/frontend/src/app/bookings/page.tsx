@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth"
 import { api } from "@/lib/api"
 import AppLayout from "@/components/app-layout"
 import { Badge } from "@/components/ui/badge"
+import { Search, Plus } from "lucide-react"
 
 const statusColors: Record<string, "default" | "secondary" | "success" | "destructive" | "outline"> = {
   booking_created: "secondary", kyc_verification: "default", crm_approval: "outline", completed: "success", rejected: "destructive",
@@ -33,33 +34,41 @@ export default function BookingsPage() {
   return (
     <AppLayout>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Bookings</h1>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <span className="w-1 h-6 bg-blue-600 rounded-full inline-block" />
+          Bookings
+        </h1>
         {(user.role === "data_entry" || user.role === "super_admin") && (
-          <Link href="/bookings/new" className="inline-flex items-center justify-center h-9 px-4 py-2 rounded-md text-sm font-medium bg-primary text-primary-foreground shadow hover:bg-primary/90">New Booking</Link>
+          <Link href="/bookings/new" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md text-sm font-medium bg-blue-600 text-white shadow hover:bg-blue-700 transition-colors">
+            <Plus className="w-4 h-4" /> New Booking
+          </Link>
         )}
       </div>
-      <input type="text" placeholder="Search by customer or project..." value={search} onChange={(e) => setSearch(e.target.value)}
-        className="mb-4 flex h-9 w-full max-w-sm rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm" />
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow overflow-hidden">
+      <div className="relative mb-4 max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input type="text" placeholder="Search by customer or project..." value={search} onChange={(e) => setSearch(e.target.value)}
+          className="pl-9 flex h-9 w-full rounded-md border border-gray-200 dark:border-gray-700 bg-transparent px-3 py-1 text-sm shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+      </div>
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm ring-1 ring-gray-200 dark:ring-gray-800 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 dark:bg-gray-800"><tr>
-            <th className="text-left p-3 font-medium">Customer</th>
-            <th className="text-left p-3 font-medium">Project</th>
-            <th className="text-left p-3 font-medium">Status</th>
-            <th className="text-left p-3 font-medium">Plan</th>
-            <th className="text-left p-3 font-medium">Actions</th>
+          <thead className="bg-gray-50 dark:bg-gray-800/50"><tr>
+            <th className="text-left p-3 font-medium text-gray-500">Customer</th>
+            <th className="text-left p-3 font-medium text-gray-500">Project</th>
+            <th className="text-left p-3 font-medium text-gray-500">Status</th>
+            <th className="text-left p-3 font-medium text-gray-500">Plan</th>
+            <th className="text-left p-3 font-medium text-gray-500"></th>
           </tr></thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {filtered.map((b) => (
-              <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                <td className="p-3">{b.client_name}</td>
-                <td className="p-3">{b.project_name}</td>
+              <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+                <td className="p-3 font-medium">{b.client_name}</td>
+                <td className="p-3 text-gray-600 dark:text-gray-400">{b.project_name}</td>
                 <td className="p-3"><Badge variant={statusColors[b.status] || "outline"}>{b.status}</Badge></td>
-                <td className="p-3">{b.payment_plan || "-"}</td>
-                <td className="p-3"><Link href={`/bookings/${b.id}`} className="text-blue-600 hover:underline">View</Link></td>
+                <td className="p-3 text-gray-600 dark:text-gray-400">{b.payment_plan || "-"}</td>
+                <td className="p-3"><Link href={`/bookings/${b.id}`} className="text-blue-600 hover:text-blue-700 text-xs font-medium">View →</Link></td>
               </tr>
             ))}
-            {filtered.length === 0 && <tr><td colSpan={5} className="p-6 text-center text-gray-500">No bookings found</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-gray-400">No bookings found</td></tr>}
           </tbody>
         </table>
       </div>
