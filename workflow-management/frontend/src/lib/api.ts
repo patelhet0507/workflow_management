@@ -92,15 +92,22 @@ export const FIELD_TYPES = [
 
 const BOOKINGS = "bookings"
 const USERS = "users"
+
+const SIGN_FIELDS: Record<string, string> = {
+  cso_approved: "cso_sign",
+  kyc_pending: "kyc_upload",
+  crm_approved: "crm_team_sign",
+  management_approved: "management_sign",
+}
 const SUPER_ADMIN_EMAIL = "patelhet.0507@gmail.com"
 
 const DEFAULT_FLOW: StageDef[] = [
   { status: "booking_completed", role: "sales" },
   { status: "unit_allocated", role: "sales" },
+  { status: "cso_approved", role: "cso" },
   { status: "kyc_pending", role: "crm" },
-  { status: "kyc_completed", role: "crm" },
-  { status: "crm_approved", role: "management" },
-  { status: "management_approval_pending", role: "management" },
+  { status: "crm_approved", role: "crm" },
+  { status: "management_approved", role: "management" },
   { status: "ats_approved", role: "documentation" },
   { status: "sale_deed_approved", role: "documentation" },
   { status: "print_requested", role: "crm_documentation" },
@@ -212,7 +219,11 @@ export const api = {
     const idx = statuses.indexOf(currentStatus)
     const newStatus = action === "approve" ? (idx < statuses.length - 1 ? statuses[idx + 1] : currentStatus) : "rejected"
 
-    await updateDoc(doc(db, BOOKINGS, bookingId), { status: newStatus, updated_at: Timestamp.now() })
+    const signUpdates: Partial<BookingData> = action === "approve" && SIGN_FIELDS[currentStatus]
+      ? { [SIGN_FIELDS[currentStatus]]: userName } as Partial<BookingData>
+      : {}
+
+    await updateDoc(doc(db, BOOKINGS, bookingId), { status: newStatus, updated_at: Timestamp.now(), ...signUpdates })
     await addDoc(collection(db, BOOKINGS, bookingId, "approvals"), {
       action, user_id: userId, user_name: userName, stage: currentStatus, comment: comment || "",
       created_at: Timestamp.now(),
@@ -255,12 +266,13 @@ export const api = {
 }
 
 const DEFAULT_BOOKING_FIELDS: BookingFieldDef[] = [
-  { key: "client_name", label: "Client Name", type: "text", required: true },
   { key: "client_confirmation_date", label: "Client Confirmation Date", type: "date", required: true },
   { key: "onboarding_date", label: "Onboarding Date", type: "date", required: true },
-  { key: "unit_no", label: "Unit No", type: "text", required: true },
-  { key: "sd_value", label: "SD Value", type: "number" },
-  { key: "payment_plan", label: "Payment Plan", type: "select", options: ["Full Payment", "Installment (6 months)", "Installment (12 months)", "Installment (24 months)", "Construction Linked"] },
-  { key: "source_of_booking", label: "Source of Booking", type: "select", options: ["Walk-in", "Agent", "Referral", "Online", "Phone Inquiry", "Other"] },
-  { key: "remarks", label: "Remarks", type: "textarea" },
+  { key: "project_name", label: "Project Name", type: "text", required: true },
+  { key: "unit_no", label: "Unit Number", type: "text", required: true },
+  { key: "client_name", label: "Client Name", type: "text", required: true },
+  { key: "sd_value", label: "SD Value", type: "number", required: true },
+  { key: "payment_plan", label: "Payment Plan", type: "select", required: true, options: ["Full Payment", "Installment (6 months)", "Installment (12 months)", "Installment (24 months)", "Construction Linked"] },
+  { key: "source_of_booking", label: "Source of Booking", type: "select", required: true, options: ["Walk-in", "Agent", "Referral", "Online", "Phone Inquiry", "Other"] },
+  { key: "remarks", label: "Remark", type: "textarea" },
 ]

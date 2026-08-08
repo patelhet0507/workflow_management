@@ -38,6 +38,13 @@ const statusColors: Record<string, "default" | "secondary" | "success" | "destru
   rejected: "destructive",
 }
 
+const SIGN_LABELS: Record<string, string> = {
+  cso_sign: "CSO Sign",
+  kyc_upload: "KYC Upload",
+  crm_team_sign: "CRM Team Sign",
+  management_sign: "Management Sign",
+}
+
 function displayValue(f: { key: string; type?: string }, booking: any): string {
   const raw = booking[f.key]
   if (raw === undefined || raw === null || raw === "") return "-"
@@ -181,6 +188,15 @@ export default function BookingDetailPage() {
                   <div key={f.key} className={f.type === "textarea" ? "md:col-span-2" : ""}>
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{f.label}{f.required && <span className="text-red-500"> *</span>}</p>
                     <p className="text-sm font-medium">{displayValue(f, booking)}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex flex-wrap gap-2">
+                {(["cso_sign", "kyc_upload", "crm_team_sign", "management_sign"] as const).map((k) => (
+                  <div key={k} className="flex items-center gap-1.5 text-xs">
+                    <span className={`w-2 h-2 rounded-full ${booking[k] ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`} />
+                    <span className="text-gray-500">{SIGN_LABELS[k]}</span>
+                    {booking[k] ? <span className="font-medium text-gray-800 dark:text-gray-200">{booking[k]}</span> : <span className="text-gray-400">pending</span>}
                   </div>
                 ))}
               </div>

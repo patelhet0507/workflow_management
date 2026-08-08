@@ -59,6 +59,10 @@ export default function NewBookingPage() {
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <Label>Booked By</Label>
+                  <Input value={user.name} disabled className="bg-gray-50 dark:bg-gray-800" />
+                </div>
                 {fields.map((f) => (
                   <div key={f.key} className={f.type === "textarea" || f.type === "checkbox" ? "md:col-span-2 space-y-2" : "space-y-2"}>
                     <Label>{f.label}{f.required && <span className="text-red-500"> *</span>}</Label>
@@ -83,6 +87,22 @@ export default function NewBookingPage() {
                     )}
                   </div>
                 ))}
+              </div>
+              <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Sign-offs (done by respective teams after creation)</p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: "CSO Sign", by: "CSO" },
+                    { key: "KYC Upload", by: "CRM" },
+                    { key: "CRM Team Sign", by: "CRM" },
+                    { key: "Management Sign", by: "Management" },
+                  ].map((s) => (
+                    <span key={s.key} className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500">
+                      <span className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600" />
+                      {s.key} · {s.by}
+                    </span>
+                  ))}
+                </div>
               </div>
               {error && <p className="text-sm text-red-500 bg-red-50 dark:bg-red-950/50 px-3 py-2 rounded-md">{error}</p>}
               <div className="flex gap-3 pt-2">

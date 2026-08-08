@@ -1,6 +1,6 @@
-// One-shot seed: writes the default approval flow into Firestore `config/approval_flow`.
+// One-shot seed: writes the default approval flow and booking form configuration.
 // Uses the firebase-tools stored refresh token to mint an access token, then
-// pushes the doc via the Firestore REST API.
+// pushes the docs via the Firestore REST API.
 // Run: node scripts/seed-approval-flow.mjs
 import fs from "node:fs";
 import os from "node:os";
@@ -13,10 +13,10 @@ const CLIENT_SECRET = "j9iVZfS8kkCEFUPaAeJV0sAi";
 const stages = [
   { status: "booking_completed", role: "sales" },
   { status: "unit_allocated", role: "sales" },
+  { status: "cso_approved", role: "cso" },
   { status: "kyc_pending", role: "crm" },
-  { status: "kyc_completed", role: "crm" },
-  { status: "crm_approved", role: "management" },
-  { status: "management_approval_pending", role: "management" },
+  { status: "crm_approved", role: "crm" },
+  { status: "management_approved", role: "management" },
   { status: "ats_approved", role: "documentation" },
   { status: "sale_deed_approved", role: "documentation" },
   { status: "print_requested", role: "crm_documentation" },
@@ -30,6 +30,18 @@ const stages = [
   { status: "document_scanned", role: "scan_verification" },
   { status: "sales_closed", role: "sales_closing" },
   { status: "archived", role: "admin" },
+];
+
+const bookingFields = [
+  { key: "client_confirmation_date", label: "Client Confirmation Date", type: "date", required: true },
+  { key: "onboarding_date", label: "Onboarding Date", type: "date", required: true },
+  { key: "project_name", label: "Project Name", type: "text", required: true },
+  { key: "unit_no", label: "Unit Number", type: "text", required: true },
+  { key: "client_name", label: "Client Name", type: "text", required: true },
+  { key: "sd_value", label: "SD Value", type: "number", required: true },
+  { key: "payment_plan", label: "Payment Plan", type: "select", required: true, options: ["Full Payment", "Installment (6 months)", "Installment (12 months)", "Installment (24 months)", "Construction Linked"] },
+  { key: "source_of_booking", label: "Source of Booking", type: "select", required: true, options: ["Walk-in", "Agent", "Referral", "Online", "Phone Inquiry", "Other"] },
+  { key: "remarks", label: "Remark", type: "textarea", required: false },
 ];
 
 const configPath = path.join(os.homedir(), ".config", "configstore", "firebase-tools.json");
@@ -67,28 +79,49 @@ function fields(stages) {
   };
 }
 
-const base = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/config`;
-
-const token = await getAccessToken();
-console.log(`seeding approval flow into ${PROJECT_ID}...`);
-
-let res = await fetch(`${base}?documentId=approval_flow`, {
-  method: "POST",
-  headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-  body: JSON.stringify({ fields: fields(stages) }),
-});
-
-if (res.status === 409) {
-  // doc exists -> overwrite via PATCH
-  res = await fetch(`${base}/approval_flow`, {
-    method: "PATCH",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ fields: fields(stages) }),
-  });
-  console.log("updated existing config/approval_flow");
-} else if (res.ok) {
-  console.log("created config/approval_flow");
+function formFields(fields) {
+  return {
+    fields: {
+      arrayValue: {
+        values: fields.map((f) => {
+          const fv = {
+            key: { stringValue: f.key },
+            label: { stringValue: f.label },
+            type: { stringValue: f.type },
+            required: { booleanValue: !!f.required },
+          };
+          if (f.options) {
+            fv.options = { arrayValue: { values: f.options.map((o) => ({ stringValue: o })) } };
+          }
+          return { mapValue: { fields: fv } };
+        }),
+      },
+    },
+  };
 }
 
-if (!res.ok) throw new Error(`seed failed: ${res.status} ${await res.text()}`);
+async function writeDoc(token, docId, payload) {
+  const base = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/config`;
+  let res = await fetch(`${base}?documentId=${docId}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ fields: payload }),
+  });
+  if (res.status === 409) {
+    res = await fetch(`${base}/${docId}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ fields: payload }),
+    });
+    console.log(`updated config/${docId}`);
+  } else if (res.ok) {
+    console.log(`created config/${docId}`);
+  }
+  if (!res.ok) throw new Error(`seed config/${docId} failed: ${res.status} ${await res.text()}`);
+}
+
+const token = await getAccessToken();
+console.log(`seeding config into ${PROJECT_ID}...`);
+await writeDoc(token, "approval_flow", fields(stages));
+await writeDoc(token, "booking_form", formFields(bookingFields));
 console.log("done");
