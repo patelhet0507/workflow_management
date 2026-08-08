@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth"
-import { api, type BookingFieldDef } from "@/lib/api"
+import { api, type BookingFieldDef, SECTION_NAMES } from "@/lib/api"
 import AppLayout from "@/components/app-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,6 +43,33 @@ export default function NewBookingPage() {
     } catch (err: any) { setError(err.message) }
   }
 
+  const sections = Array.from(new Set(fields.map((f) => f.section || "unit_allocation")))
+
+  const renderField = (f: BookingFieldDef) => (
+    <div key={f.key} className={f.type === "textarea" || f.type === "checkbox" ? "md:col-span-2 space-y-2" : "space-y-2"}>
+      <Label>{f.label}{f.required && <span className="text-red-500"> *</span>}</Label>
+      {f.type === "checkbox" ? (
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={values[f.key] === "true"} onChange={(e) => setValues({ ...values, [f.key]: e.target.checked ? "true" : "" })} />
+          {f.label}
+        </label>
+      ) : f.type === "textarea" ? (
+        <textarea value={values[f.key]} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
+          placeholder={f.label}
+          className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+      ) : f.type === "select" ? (
+        <select value={values[f.key]} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
+          className="flex h-9 w-full rounded-md border border-input bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-1 text-sm shadow-sm focus:ring-2 focus:ring-blue-500">
+          <option value="">Select...</option>
+          {(f.options || []).map((o) => <option key={o} value={o}>{o}</option>)}
+        </select>
+      ) : (
+        <Input type={f.type} value={values[f.key]} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
+          placeholder={f.label} className="focus:ring-2 focus:ring-blue-500" />
+      )}
+    </div>
+  )
+
   if (isLoading || !user) return null
 
   return (
@@ -58,36 +85,18 @@ export default function NewBookingPage() {
           </CardHeader>
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="space-y-2">
-                  <Label>Booked By</Label>
-                  <Input value={user.name} disabled className="bg-gray-50 dark:bg-gray-800" />
-                </div>
-                {fields.map((f) => (
-                  <div key={f.key} className={f.type === "textarea" || f.type === "checkbox" ? "md:col-span-2 space-y-2" : "space-y-2"}>
-                    <Label>{f.label}{f.required && <span className="text-red-500"> *</span>}</Label>
-                    {f.type === "checkbox" ? (
-                      <label className="flex items-center gap-2 text-sm">
-                        <input type="checkbox" checked={values[f.key] === "true"} onChange={(e) => setValues({ ...values, [f.key]: e.target.checked ? "true" : "" })} />
-                        {f.label}
-                      </label>
-                    ) : f.type === "textarea" ? (
-                      <textarea value={values[f.key]} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
-                        placeholder={f.label}
-                        className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-                    ) : f.type === "select" ? (
-                      <select value={values[f.key]} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
-                        className="flex h-9 w-full rounded-md border border-input bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-1 text-sm shadow-sm focus:ring-2 focus:ring-blue-500">
-                        <option value="">Select...</option>
-                        {(f.options || []).map((o) => <option key={o} value={o}>{o}</option>)}
-                      </select>
-                    ) : (
-                      <Input type={f.type} value={values[f.key]} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
-                        placeholder={f.label} className="focus:ring-2 focus:ring-blue-500" />
-                    )}
-                  </div>
-                ))}
+              <div className="space-y-2">
+                <Label>Booked By</Label>
+                <Input value={`${user.name}`} disabled className="bg-gray-50 dark:bg-gray-800" />
               </div>
+              {sections.map((section) => (
+                <div key={section} className="pt-4 border-t border-gray-100 dark:border-gray-800">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{SECTION_NAMES[section] || section.replace(/_/g, " ")}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {fields.filter((f) => (f.section || "unit_allocation") === section).map(renderField)}
+                  </div>
+                </div>
+              ))}
               <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Sign-offs (done by respective teams after creation)</p>
                 <div className="flex flex-wrap gap-2">

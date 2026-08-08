@@ -43,10 +43,17 @@ export interface BookingData {
   bank_name?: string
   cheque_no?: string
   amount?: number
+  loan_cheque_available?: string
   client_signature_date?: string
   execution_date?: string
   index_ii?: boolean
   certified_copy?: boolean
+  account_checked?: boolean
+  provided_to_crm?: boolean
+  provided_to_legal?: boolean
+  final_verification?: boolean
+  document_to_admin?: boolean
+  scan_check?: boolean
   document_scan?: boolean
   sales_close?: boolean
   final_remarks?: string
@@ -79,6 +86,7 @@ export interface BookingFieldDef {
   type: "text" | "number" | "date" | "select" | "textarea" | "checkbox"
   required?: boolean
   options?: string[]
+  section?: string
 }
 
 export const FIELD_TYPES = [
@@ -265,14 +273,48 @@ export const api = {
   },
 }
 
+export const SECTION_NAMES: Record<string, string> = {
+  unit_allocation: "Unit Allocation & Approval",
+  ats_sale_deed: "ATS & Sale Deed Approval",
+  print_request: "Print Request (CRM)",
+  registration: "Document Registration Process",
+  closing: "Scan & Sales Close",
+}
+
 const DEFAULT_BOOKING_FIELDS: BookingFieldDef[] = [
-  { key: "client_confirmation_date", label: "Client Confirmation Date", type: "date", required: true },
-  { key: "onboarding_date", label: "Onboarding Date", type: "date", required: true },
-  { key: "project_name", label: "Project Name", type: "text", required: true },
-  { key: "unit_no", label: "Unit Number", type: "text", required: true },
-  { key: "client_name", label: "Client Name", type: "text", required: true },
-  { key: "sd_value", label: "SD Value", type: "number", required: true },
-  { key: "payment_plan", label: "Payment Plan", type: "select", required: true, options: ["Full Payment", "Installment (6 months)", "Installment (12 months)", "Installment (24 months)", "Construction Linked"] },
-  { key: "source_of_booking", label: "Source of Booking", type: "select", required: true, options: ["Walk-in", "Agent", "Referral", "Online", "Phone Inquiry", "Other"] },
-  { key: "remarks", label: "Remark", type: "textarea" },
+  { key: "client_confirmation_date", label: "Client Confirmation Date", type: "date", required: true, section: "unit_allocation" },
+  { key: "onboarding_date", label: "Onboarding Date", type: "date", required: true, section: "unit_allocation" },
+  { key: "project_name", label: "Project Name", type: "text", required: true, section: "unit_allocation" },
+  { key: "unit_no", label: "Unit Number", type: "text", required: true, section: "unit_allocation" },
+  { key: "client_name", label: "Client Name", type: "text", required: true, section: "unit_allocation" },
+  { key: "sd_value", label: "SD Value", type: "number", required: true, section: "unit_allocation" },
+  { key: "payment_plan", label: "Payment Plan", type: "select", required: true, options: ["Full Payment", "Installment (6 months)", "Installment (12 months)", "Installment (24 months)", "Construction Linked"], section: "unit_allocation" },
+  { key: "source_of_booking", label: "Source of Booking", type: "select", required: true, options: ["Walk-in", "Agent", "Referral", "Online", "Phone Inquiry", "Other"], section: "unit_allocation" },
+  { key: "remarks", label: "Remark", type: "textarea", section: "unit_allocation" },
+
+  { key: "ats_approval", label: "ATS (Bharti Ma'am)", type: "checkbox", section: "ats_sale_deed" },
+  { key: "sale_deed_approval", label: "Sale Deed (Bharti Ma'am)", type: "checkbox", section: "ats_sale_deed" },
+  { key: "management_approval", label: "Management Approval", type: "checkbox", section: "ats_sale_deed" },
+
+  { key: "email_sent", label: "Email", type: "text", section: "print_request" },
+  { key: "client_confirmation", label: "Client Confirmation", type: "text", section: "print_request" },
+
+  { key: "application_no_ats", label: "Apl No (ATS)", type: "text", section: "registration" },
+  { key: "application_no_sale_deed", label: "Apl No (Sale Deed)", type: "text", section: "registration" },
+  { key: "basic_amount", label: "Basic Amount", type: "number", section: "registration" },
+  { key: "gst", label: "GST", type: "number", section: "registration" },
+  { key: "running_maintenance", label: "Running Maintenance", type: "number", section: "registration" },
+  { key: "maintenance_deposit", label: "Maintenance Deposit", type: "number", section: "registration" },
+  { key: "stamp_duty", label: "Stamp Duty", type: "number", section: "registration" },
+  { key: "legal_charges", label: "Legal Charges", type: "number", section: "registration" },
+  { key: "png_charges", label: "PNG Charges", type: "number", section: "registration" },
+  { key: "tds", label: "TDS", type: "number", section: "registration" },
+  { key: "loan_cheque_available", label: "Loan Cheque/DD (N/A)", type: "text", section: "registration" },
+  { key: "loan_cheque_dd_date", label: "DD Date", type: "date", section: "registration" },
+  { key: "bank_name", label: "Bank Name", type: "text", section: "registration" },
+  { key: "cheque_no", label: "Cheque No.", type: "text", section: "registration" },
+  { key: "amount", label: "Amount", type: "number", section: "registration" },
+
+  { key: "index_ii", label: "Index II", type: "checkbox", section: "registration" },
+  { key: "certified_copy", label: "Certified Copy", type: "checkbox", section: "registration" },
 ]
