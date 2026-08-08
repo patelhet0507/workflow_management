@@ -1,5 +1,5 @@
 import { auth, db } from "./firebase"
-import { doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, setDoc, query, collection, where, orderBy, Timestamp } from "firebase/firestore"
+import { doc, getDoc, getDocs, addDoc, updateDoc, setDoc, query, collection, where, orderBy, Timestamp } from "firebase/firestore"
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth"
 
 export interface UserData {
@@ -13,11 +13,9 @@ export interface BookingData {
   id?: string
   client_confirmation_date?: string
   onboarding_date?: string
-  project_name: string
+  project_name?: string
   unit_no: string
   client_name: string
-  project_id?: string
-  project_details?: Record<string, string>
   sd_value?: number
   payment_plan?: string
   source_of_booking?: string
@@ -75,20 +73,25 @@ export interface StageDef {
   role: string
 }
 
-export interface FieldSpec {
-  name: string
+export interface BookingFieldDef {
+  key: string
+  label: string
+  type: "text" | "number" | "date" | "select" | "textarea" | "checkbox"
   required?: boolean
+  options?: string[]
 }
 
-export interface ProjectType {
-  id: string
-  name: string
-  fields: FieldSpec[]
-}
+export const FIELD_TYPES = [
+  { value: "text", label: "Text" },
+  { value: "number", label: "Number" },
+  { value: "date", label: "Date" },
+  { value: "select", label: "Dropdown" },
+  { value: "textarea", label: "Paragraph" },
+  { value: "checkbox", label: "Checkbox" },
+]
 
 const BOOKINGS = "bookings"
 const USERS = "users"
-const PROJECTS = "projects"
 const SUPER_ADMIN_EMAIL = "patelhet.0507@gmail.com"
 
 const DEFAULT_FLOW: StageDef[] = [
@@ -240,46 +243,24 @@ export const api = {
     return snap.docs.map((d) => ({ id: d.id, ...d.data() })) as UserData[]
   },
 
-  async getProjects(): Promise<ProjectType[]> {
-    const snap = await getDocs(collection(db, PROJECTS))
-    const projects = snap.docs.map((d) => ({
-      id: d.id,
-      name: d.data().name || "Untitled",
-      fields: normalizeProjectFields(d.data().fields),
-    }) as ProjectType)
-    return projects.sort((a, b) => a.name.localeCompare(b.name))
+  async getBookingForm(): Promise<BookingFieldDef[]> {
+    const snap = await getDoc(doc(db, "config", "booking_form"))
+    if (snap.exists()) return (snap.data().fields as BookingFieldDef[]) || DEFAULT_BOOKING_FIELDS
+    return DEFAULT_BOOKING_FIELDS
   },
 
-  async createProject(data: { name: string; fields: FieldSpec[] }) {
-    const ref = await addDoc(collection(db, PROJECTS), {
-      name: data.name,
-      fields: normalizeProjectFields(data.fields),
-      created_at: Timestamp.now(),
-    })
-    const snap = await getDoc(ref)
-    return { id: snap.id, ...snap.data() } as ProjectType
-  },
-
-  async updateProject(id: string, data: { name: string; fields: FieldSpec[] }) {
-    await updateDoc(doc(db, PROJECTS, id), {
-      name: data.name,
-      fields: normalizeProjectFields(data.fields),
-      updated_at: Timestamp.now(),
-    })
-  },
-
-  async deleteProject(id: string) {
-    await deleteDoc(doc(db, PROJECTS, id))
+  async updateBookingForm(fields: BookingFieldDef[]) {
+    await setDoc(doc(db, "config", "booking_form"), { fields })
   },
 }
 
-export function normalizeProjectFields(fields: unknown): FieldSpec[] {
-  if (!Array.isArray(fields)) return []
-  return fields
-    .map((f: any) =>
-      typeof f === "string"
-        ? { name: f, required: false }
-        : { name: f?.name ?? "", required: !!f?.required }
-    )
-    .filter((f) => f.name.trim())
-}
+const DEFAULT_BOOKING_FIELDS: BookingFieldDef[] = [
+  { key: "client_name", label: "Client Name", type: "text", required: true },
+  { key: "client_confirmation_date", label: "Client Confirmation Date", type: "date", required: true },
+  { key: "onboarding_date", label: "Onboarding Date", type: "date", required: true },
+  { key: "unit_no", label: "Unit No", type: "text", required: true },
+  { key: "sd_value", label: "SD Value", type: "number" },
+  { key: "payment_plan", label: "Payment Plan", type: "select", options: ["Full Payment", "Installment (6 months)", "Installment (12 months)", "Installment (24 months)", "Construction Linked"] },
+  { key: "source_of_booking", label: "Source of Booking", type: "select", options: ["Walk-in", "Agent", "Referral", "Online", "Phone Inquiry", "Other"] },
+  { key: "remarks", label: "Remarks", type: "textarea" },
+]

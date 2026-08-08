@@ -67,27 +67,6 @@ export interface FieldGroup {
 
 export const FIELD_GROUPS: FieldGroup[] = [
   {
-    key: "unit_allocation",
-    label: "Unit Allocation",
-    owners: ["sales", "admin", "super_admin"],
-    fields: [
-      { key: "client_confirmation_date", label: "Client Confirmation Date", type: "date" },
-      { key: "onboarding_date", label: "Onboarding Date", type: "date" },
-      { key: "project_name", label: "Project Name" },
-      { key: "unit_no", label: "Unit Number" },
-      { key: "client_name", label: "Client Name" },
-      { key: "sd_value", label: "SD Value", type: "number" },
-      { key: "payment_plan", label: "Payment Plan" },
-      { key: "source_of_booking", label: "Source of Booking" },
-      { key: "sales_exec_name", label: "Booked By" },
-      { key: "cso_sign", label: "CSO Sign" },
-      { key: "kyc_upload", label: "KYC Upload" },
-      { key: "crm_team_sign", label: "CRM Team Sign" },
-      { key: "management_sign", label: "Management Sign" },
-      { key: "remarks", label: "Remarks", type: "textarea" },
-    ],
-  },
-  {
     key: "ats_sale_deed",
     label: "ATS & Sale Deed",
     owners: ["documentation", "management", "admin", "super_admin"],

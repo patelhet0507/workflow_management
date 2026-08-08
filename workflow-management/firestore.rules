@@ -39,13 +39,6 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // ---- Projects (master reference) ----
-    // Reference data: read by everyone signed-in (booking form), admin maintains.
-    match /projects/{doc} {
-      allow read: if signedIn();
-      allow write: if isAdmin();
-    }
-
     // ---- Bookings ----
     // Everyone signed-in reads; sales + admin creates; any workflow role
     // updates (approve/reject writes status + approval doc).

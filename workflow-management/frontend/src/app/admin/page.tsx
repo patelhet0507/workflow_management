@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth"
-import { api, type UserData, type StageDef } from "@/lib/api"
+import { api, type UserData, type StageDef, type BookingFieldDef, FIELD_TYPES } from "@/lib/api"
 import { ROLES } from "@/lib/constants"
 import AppLayout from "@/components/app-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -27,7 +27,12 @@ export default function AdminPage() {
   const [flowMsg, setFlowMsg] = useState("")
   const [saving, setSaving] = useState(false)
   const [newStageStatus, setNewStageStatus] = useState("")
-  const [newStageRole, setNewStageRole] = useState("KYC")
+  const [newStageRole, setNewStageRole] = useState("sales")
+
+  const [formFields, setFormFields] = useState<BookingFieldDef[]>([])
+  const [formMsg, setFormMsg] = useState("")
+  const [newFieldLabel, setNewFieldLabel] = useState("")
+  const [newFieldType, setNewFieldType] = useState<BookingFieldDef["type"]>("text")
 
   const isAdmin = user?.role === "admin" || user?.role === "super_admin"
 
@@ -36,6 +41,7 @@ export default function AdminPage() {
     if (isAdmin) {
       api.getUsers().then(setUsers).catch(console.error)
       api.getApprovalFlow().then(setFlow).catch(console.error)
+      api.getBookingForm().then(setFormFields).catch(console.error)
     }
   }, [user, isLoading, router])
 
@@ -82,6 +88,38 @@ export default function AdminPage() {
       await api.updateApprovalFlow(flow)
       setFlowMsg("Flow saved")
     } catch (err: any) { setFlowMsg(err.message) }
+    finally { setSaving(false) }
+  }
+
+  const slugify = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")
+
+  const addField = () => {
+    if (!newFieldLabel.trim()) return
+    setFormFields([...formFields, { key: slugify(newFieldLabel), label: newFieldLabel.trim(), type: newFieldType }])
+    setNewFieldLabel("")
+  }
+
+  const updateField = (idx: number, patch: Partial<BookingFieldDef>) => {
+    setFormFields(formFields.map((f, i) => (i === idx ? { ...f, ...patch } : f)))
+  }
+
+  const moveField = (idx: number, dir: -1 | 1) => {
+    const j = idx + dir
+    if (j < 0 || j >= formFields.length) return
+    const copy = [...formFields]
+    const tmp = copy[idx]
+    copy[idx] = copy[j]
+    copy[j] = tmp
+    setFormFields(copy)
+  }
+
+  const saveForm = async () => {
+    setSaving(true)
+    setFormMsg("")
+    try {
+      await api.updateBookingForm(formFields.map((f) => ({ ...f, key: f.key || slugify(f.label) })))
+      setFormMsg("Booking form saved")
+    } catch (err: any) { setFormMsg(err.message) }
     finally { setSaving(false) }
   }
 
@@ -161,6 +199,60 @@ export default function AdminPage() {
                 <Save className="w-4 h-4 mr-1.5" /> {saving ? "Saving..." : "Save Flow"}
               </Button>
               {flowMsg && <p className="text-sm text-blue-600">{flowMsg}</p>}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-md border-0 ring-1 ring-gray-200 dark:ring-gray-800 mb-8">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-t-lg">
+            <CardTitle className="text-lg">Booking Form Fields</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <p className="text-sm text-gray-500 mb-4">Add, remove, or reorder the fields shown on the New Booking form. Each field can be marked required.</p>
+
+            <div className="flex items-end gap-2 mb-6 max-w-lg">
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs">Field Label</Label>
+                <Input value={newFieldLabel} onChange={(e) => setNewFieldLabel(e.target.value)} placeholder="e.g. PAN Number" className="focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Type</Label>
+                <select value={newFieldType} onChange={(e) => setNewFieldType(e.target.value as BookingFieldDef["type"])}
+                  className="flex h-9 w-36 rounded-md border border-input bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-1 text-sm shadow-sm">
+                  {FIELD_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </div>
+              <Button onClick={addField} size="sm" className="mb-0.5 bg-blue-600 hover:bg-blue-700"><Plus className="w-4 h-4 mr-1" /> Add</Button>
+            </div>
+
+            <div className="space-y-2 max-w-3xl">
+              {formFields.map((f, i) => (
+                <div key={i} className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700">
+                  <span className="text-xs font-bold text-gray-400 w-5">{i + 1}.</span>
+                  <Input value={f.label} onChange={(e) => updateField(i, { label: e.target.value, key: e.target.value ? slugify(e.target.value) : f.key })} className="flex-1 h-8 focus:ring-2 focus:ring-blue-500" />
+                  <select value={f.type} onChange={(e) => updateField(i, { type: e.target.value as BookingFieldDef["type"] })}
+                    className="h-8 w-32 rounded border border-input bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2 text-xs">
+                    {FIELD_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                  {f.type === "select" && (
+                    <Input value={(f.options || []).join(", ")} onChange={(e) => updateField(i, { options: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })}
+                      placeholder="options, comma, separated" className="w-44 h-8 text-xs focus:ring-2 focus:ring-blue-500" />
+                  )}
+                  <label className="flex items-center gap-1.5 text-xs whitespace-nowrap">
+                    <input type="checkbox" checked={!!f.required} onChange={(e) => updateField(i, { required: e.target.checked })} />
+                    Required
+                  </label>
+                  <button onClick={() => moveField(i, -1)} disabled={i === 0} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30"><ArrowUp className="w-4 h-4" /></button>
+                  <button onClick={() => moveField(i, 1)} disabled={i === formFields.length - 1} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30"><ArrowDown className="w-4 h-4" /></button>
+                  <button onClick={() => setFormFields(formFields.filter((_, j) => j !== i))} className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-950/50 text-gray-400 hover:text-red-600"><X className="w-4 h-4" /></button>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-3 mt-4">
+              <Button onClick={saveForm} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
+                <Save className="w-4 h-4 mr-1.5" /> {saving ? "Saving..." : "Save Form"}
+              </Button>
+              {formMsg && <p className="text-sm text-blue-600">{formMsg}</p>}
             </div>
           </CardContent>
         </Card>

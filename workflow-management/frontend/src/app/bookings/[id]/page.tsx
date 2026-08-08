@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { useAuth } from "@/lib/auth"
-import { api, type StageDef } from "@/lib/api"
+import { api, type StageDef, type BookingFieldDef } from "@/lib/api"
 import { FIELD_GROUPS, statusLabel, roleLabel, type FieldGroup } from "@/lib/constants"
 import AppLayout from "@/components/app-layout"
 import { Badge } from "@/components/ui/badge"
@@ -54,6 +54,7 @@ export default function BookingDetailPage() {
   const [booking, setBooking] = useState<any>({})
   const [history, setHistory] = useState<any[]>([])
   const [flow, setFlow] = useState<StageDef[]>([])
+  const [formFields, setFormFields] = useState<BookingFieldDef[]>([])
   const [comment, setComment] = useState("")
   const [error, setError] = useState("")
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -71,7 +72,8 @@ export default function BookingDetailPage() {
       api.getBooking(id),
       api.getBookingHistory(id),
       api.getApprovalFlow(),
-    ]).then(([b, h, f]) => { setBooking(b); setHistory(h); setFlow(f) }).catch(console.error)
+      api.getBookingForm(),
+    ]).then(([b, h, f, bf]) => { setBooking(b); setHistory(h); setFlow(f); setFormFields(bf) }).catch(console.error)
   }
 
   useEffect(() => { if (!isLoading && !user) router.push("/login"); else load() }, [user, isLoading, router, id])
@@ -168,6 +170,24 @@ export default function BookingDetailPage() {
           </div>
         </div>
 
+        {formFields.length > 0 && (
+          <Card className="mb-5 ring-1 ring-gray-100 dark:ring-gray-800 shadow-sm">
+            <CardHeader className="py-3 px-4"><CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <span className="w-1 h-4 bg-blue-600 rounded-full inline-block" />Booking Details
+            </CardTitle></CardHeader>
+            <CardContent className="px-4 pb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2.5">
+                {formFields.map((f) => (
+                  <div key={f.key} className={f.type === "textarea" ? "md:col-span-2" : ""}>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{f.label}{f.required && <span className="text-red-500"> *</span>}</p>
+                    <p className="text-sm font-medium">{displayValue(f, booking)}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="space-y-5 mb-6">
           {FIELD_GROUPS.map((group) => {
             const editing = editingGroup === group.key
@@ -215,19 +235,6 @@ export default function BookingDetailPage() {
                           <p className="text-sm font-medium">{displayValue(f, booking)}</p>
                         </div>
                       ))}
-                      {!editing && group.key === "unit_allocation" && booking.project_details && (
-                        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 md:col-span-2">
-                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">{booking.project_name || "Project"} — Detail Fields</p>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2.5">
-                            {(Object.entries(booking.project_details ?? {}) as [string, string][]).map(([k, v]) => (
-                              <div key={k}>
-                                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{k}</p>
-                                <p className="text-sm font-medium">{v || "-"}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
                 </CardContent>
