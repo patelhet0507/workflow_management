@@ -3,7 +3,7 @@
 import { ReactNode } from "react"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth"
-import { Building2, LayoutDashboard, ClipboardList, LogOut, Menu, X, Plus, Shield } from "lucide-react"
+import { Building2, LayoutDashboard, ClipboardList, LogOut, Menu, X, Plus, Shield, Folder } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 
@@ -15,6 +15,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/bookings", label: "Bookings", icon: ClipboardList },
+    { href: "/projects", label: "Projects", icon: Folder },
     ...(user?.role === "sales" || user?.role === "admin" || user?.role === "super_admin" ? [{ href: "/bookings/new", label: "New Booking", icon: Plus }] : []),
     ...(user?.role === "admin" || user?.role === "super_admin" ? [{ href: "/admin", label: "Admin", icon: Shield }] : []),
   ]

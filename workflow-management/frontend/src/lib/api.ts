@@ -1,5 +1,5 @@
 import { auth, db } from "./firebase"
-import { doc, getDoc, getDocs, addDoc, updateDoc, setDoc, query, collection, where, orderBy, Timestamp } from "firebase/firestore"
+import { doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, setDoc, query, collection, where, orderBy, Timestamp } from "firebase/firestore"
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth"
 
 export interface UserData {
@@ -16,6 +16,8 @@ export interface BookingData {
   project_name: string
   unit_no: string
   client_name: string
+  project_id?: string
+  project_details?: Record<string, string>
   sd_value?: number
   payment_plan?: string
   source_of_booking?: string
@@ -73,8 +75,20 @@ export interface StageDef {
   role: string
 }
 
+export interface FieldSpec {
+  name: string
+  required?: boolean
+}
+
+export interface ProjectType {
+  id: string
+  name: string
+  fields: FieldSpec[]
+}
+
 const BOOKINGS = "bookings"
 const USERS = "users"
+const PROJECTS = "projects"
 const SUPER_ADMIN_EMAIL = "patelhet.0507@gmail.com"
 
 const DEFAULT_FLOW: StageDef[] = [
@@ -225,4 +239,47 @@ export const api = {
     const snap = await getDocs(collection(db, USERS))
     return snap.docs.map((d) => ({ id: d.id, ...d.data() })) as UserData[]
   },
+
+  async getProjects(): Promise<ProjectType[]> {
+    const snap = await getDocs(collection(db, PROJECTS))
+    const projects = snap.docs.map((d) => ({
+      id: d.id,
+      name: d.data().name || "Untitled",
+      fields: normalizeProjectFields(d.data().fields),
+    }) as ProjectType)
+    return projects.sort((a, b) => a.name.localeCompare(b.name))
+  },
+
+  async createProject(data: { name: string; fields: FieldSpec[] }) {
+    const ref = await addDoc(collection(db, PROJECTS), {
+      name: data.name,
+      fields: normalizeProjectFields(data.fields),
+      created_at: Timestamp.now(),
+    })
+    const snap = await getDoc(ref)
+    return { id: snap.id, ...snap.data() } as ProjectType
+  },
+
+  async updateProject(id: string, data: { name: string; fields: FieldSpec[] }) {
+    await updateDoc(doc(db, PROJECTS, id), {
+      name: data.name,
+      fields: normalizeProjectFields(data.fields),
+      updated_at: Timestamp.now(),
+    })
+  },
+
+  async deleteProject(id: string) {
+    await deleteDoc(doc(db, PROJECTS, id))
+  },
+}
+
+export function normalizeProjectFields(fields: unknown): FieldSpec[] {
+  if (!Array.isArray(fields)) return []
+  return fields
+    .map((f: any) =>
+      typeof f === "string"
+        ? { name: f, required: false }
+        : { name: f?.name ?? "", required: !!f?.required }
+    )
+    .filter((f) => f.name.trim())
 }

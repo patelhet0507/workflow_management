@@ -215,6 +215,19 @@ export default function BookingDetailPage() {
                           <p className="text-sm font-medium">{displayValue(f, booking)}</p>
                         </div>
                       ))}
+                      {!editing && group.key === "unit_allocation" && booking.project_details && (
+                        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 md:col-span-2">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">{booking.project_name || "Project"} — Detail Fields</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2.5">
+                            {(Object.entries(booking.project_details ?? {}) as [string, string][]).map(([k, v]) => (
+                              <div key={k}>
+                                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{k}</p>
+                                <p className="text-sm font-medium">{v || "-"}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </CardContent>
