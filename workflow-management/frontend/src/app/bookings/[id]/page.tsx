@@ -4,22 +4,46 @@ import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { useAuth } from "@/lib/auth"
 import { api, type StageDef } from "@/lib/api"
+import { FIELD_GROUPS, statusLabel, roleLabel, type FieldGroup } from "@/lib/constants"
 import AppLayout from "@/components/app-layout"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Pencil, Save, X } from "lucide-react"
 
 const statusColors: Record<string, "default" | "secondary" | "success" | "destructive" | "outline"> = {
-  booking_created: "secondary", completed: "success", rejected: "destructive",
+  booking_completed: "secondary",
+  unit_allocated: "secondary",
+  kyc_pending: "secondary",
+  kyc_completed: "secondary",
+  crm_approved: "secondary",
+  management_approval_pending: "secondary",
+  ats_approved: "secondary",
+  sale_deed_approved: "secondary",
+  print_requested: "secondary",
+  documents_printed: "secondary",
+  legal_verification_pending: "secondary",
+  accounts_verification_pending: "secondary",
+  client_signature_pending: "secondary",
+  executed: "secondary",
+  registration_completed: "secondary",
+  index_ii_received: "secondary",
+  document_scanned: "secondary",
+  sales_closed: "secondary",
+  archived: "secondary",
+  completed: "success",
+  rejected: "destructive",
 }
 
-const fieldLabels: Record<string, string> = {
-  client_name: "Client Name", project_name: "Project", unit_no: "Unit No",
-  client_confirmation_date: "Confirmation Date", onboarding_date: "Onboarding Date",
-  sd_value: "SD Value", payment_plan: "Payment Plan", source_of_booking: "Source",
-  sales_exec_name: "Created By",
+function displayValue(f: { key: string; type?: string }, booking: any): string {
+  const raw = booking[f.key]
+  if (raw === undefined || raw === null || raw === "") return "-"
+  if (f.type === "checkbox") return raw ? "Yes" : "No"
+  if (f.type === "number") return Number(raw).toLocaleString()
+  return String(raw)
 }
 
 export default function BookingDetailPage() {
@@ -27,7 +51,7 @@ export default function BookingDetailPage() {
   const router = useRouter()
   const params = useParams()
   const id = params?.id as string
-  const [booking, setBooking] = useState<any>(null)
+  const [booking, setBooking] = useState<any>({})
   const [history, setHistory] = useState<any[]>([])
   const [flow, setFlow] = useState<StageDef[]>([])
   const [comment, setComment] = useState("")
@@ -36,6 +60,10 @@ export default function BookingDetailPage() {
   const [pendingAction, setPendingAction] = useState("")
   const [password, setPassword] = useState("")
   const [confirmError, setConfirmError] = useState("")
+
+  const [editingGroup, setEditingGroup] = useState<string | null>(null)
+  const [draft, setDraft] = useState<Record<string, string | boolean>>({})
+  const [saveError, setSaveError] = useState("")
 
   const load = () => {
     if (!id || !user) return
@@ -73,34 +101,60 @@ export default function BookingDetailPage() {
     const stage = flow.find((s) => s.status === booking.status)
     if (!stage) return { allowed: false, reason: "Cannot approve at this stage" }
     if (user.role === "super_admin") return { allowed: true }
-    if (user.role !== stage.role) return { allowed: false, reason: `Only ${stage.role} can approve at this stage` }
+    if (user.role !== stage.role) return { allowed: false, reason: `Only ${roleLabel(stage.role)} can approve at this stage` }
     return { allowed: true }
+  }
+
+  const canEditGroup = (group: FieldGroup): boolean => {
+    if (!user) return false
+    return group.owners.includes(user.role)
+  }
+
+  const startEdit = (group: FieldGroup) => {
+    const d: Record<string, string | boolean> = {}
+    group.fields.forEach((f) => {
+      const v = booking[f.key]
+      d[f.key] = f.type === "checkbox" ? !!v : (v === undefined || v === null ? "" : String(v))
+    })
+    setDraft(d)
+    setEditingGroup(group.key)
+    setSaveError("")
+  }
+
+  const saveGroup = async (group: FieldGroup) => {
+    if (!id) return
+    setSaveError("")
+    const updates: Record<string, any> = {}
+    group.fields.forEach((f) => {
+      const v = draft[f.key]
+      if (f.type === "checkbox") { updates[f.key] = !!v; return }
+      const s = v === undefined ? "" : String(v).trim()
+      if (s === "") { updates[f.key] = null; return }
+      updates[f.key] = f.type === "number" ? parseFloat(s) : s
+    })
+    try {
+      await api.updateBooking(id, updates)
+      setEditingGroup(null)
+      load()
+    } catch (err: any) { setSaveError(err.message || "Save failed") }
   }
 
   if (isLoading || !user || !booking) return null
 
-  const stages = [{ status: "booking_created", role: "Created" }, ...flow, { status: "completed", role: "Completed" }]
+  const stages = [{ status: "booking_completed", role: "Created" }, ...flow, { status: "completed", role: "Completed" }]
   const currentIdx = stages.findIndex((s) => s.status === booking.status)
   const progress = booking.status === "rejected" ? 0 : booking.status === "completed" ? 100 : Math.max(0, currentIdx) * (100 / (stages.length - 1))
   const approval = canApprove()
 
-  const fields = [
-    { key: "client_name", span: true },
-    { key: "project_name" }, { key: "unit_no" },
-    { key: "client_confirmation_date" }, { key: "onboarding_date" },
-    { key: "sd_value" }, { key: "payment_plan" },
-    { key: "source_of_booking" }, { key: "sales_exec_name" },
-  ]
-
   return (
     <AppLayout>
-      <div className="max-w-3xl">
+      <div className="max-w-4xl">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <span className="w-1 h-6 bg-blue-600 rounded-full inline-block" />
-            {booking.client_name}
+            {booking.client_name || "Booking"}
           </h1>
-          <Badge variant={statusColors[booking.status] || "outline"} className="text-sm capitalize">{booking.status.replace(/_/g, " ")}</Badge>
+          <Badge variant={statusColors[booking.status] || "outline"}>{statusLabel(booking.status)}</Badge>
         </div>
 
         <div className="mb-6 bg-white dark:bg-gray-900 rounded-lg p-4 ring-1 ring-gray-200 dark:ring-gray-800">
@@ -114,24 +168,60 @@ export default function BookingDetailPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          {fields.map(({ key, span }) => {
-            const val = booking[key]
+        <div className="space-y-5 mb-6">
+          {FIELD_GROUPS.map((group) => {
+            const editing = editingGroup === group.key
             return (
-              <Card key={key} className={span ? "col-span-2 ring-1 ring-gray-100 dark:ring-gray-800 shadow-sm" : "ring-1 ring-gray-100 dark:ring-gray-800 shadow-sm"}>
-                <CardHeader className="py-2.5 px-4"><CardTitle className="text-xs font-medium text-gray-500 uppercase tracking-wider">{fieldLabels[key] || key}</CardTitle></CardHeader>
-                <CardContent className="px-4 pb-3"><p className="text-sm font-medium">{key === "sd_value" && val ? Number(val).toLocaleString() : (val || "-")}</p></CardContent>
+              <Card key={group.key} className="ring-1 ring-gray-100 dark:ring-gray-800 shadow-sm">
+                <CardHeader className="py-3 px-4 flex flex-row items-center justify-between">
+                  <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    <span className="w-1 h-4 bg-blue-600 rounded-full inline-block" />
+                    {group.label}
+                  </CardTitle>
+                  {!editing && canEditGroup(group) && (
+                    <Button size="sm" variant="outline" onClick={() => startEdit(group)}><Pencil className="w-3.5 h-3.5 mr-1" /> Edit</Button>
+                  )}
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  {editing ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {group.fields.map((f) => (
+                        <div key={f.key} className={f.type === "textarea" || f.type === "checkbox" ? "md:col-span-2" : ""}>
+                          <Label className="text-xs text-gray-500 uppercase tracking-wider">{f.label}</Label>
+                          {f.type === "checkbox" ? (
+                            <label className="flex items-center gap-2 mt-1.5 text-sm">
+                              <input type="checkbox" checked={!!draft[f.key]} onChange={(e) => setDraft({ ...draft, [f.key]: e.target.checked })} />
+                              {f.label}
+                            </label>
+                          ) : f.type === "textarea" ? (
+                            <textarea value={String(draft[f.key] ?? "")} onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
+                              className="mt-1 flex min-h-[60px] w-full rounded-md border border-gray-200 dark:border-gray-700 bg-transparent px-3 py-1 text-sm shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                          ) : (
+                            <Input type={f.type || "text"} value={String(draft[f.key] ?? "")} onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })} className="mt-1 focus:ring-2 focus:ring-blue-500" />
+                          )}
+                        </div>
+                      ))}
+                      {saveError && <p className="text-sm text-red-500 md:col-span-2">{saveError}</p>}
+                      <div className="md:col-span-2 flex gap-2">
+                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => saveGroup(group)}><Save className="w-3.5 h-3.5 mr-1" /> Save</Button>
+                        <Button size="sm" variant="outline" onClick={() => { setEditingGroup(null); setSaveError("") }}><X className="w-3.5 h-3.5 mr-1" /> Cancel</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2.5">
+                      {group.fields.map((f) => (
+                        <div key={f.key} className={f.type === "textarea" ? "md:col-span-2" : ""}>
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{f.label}</p>
+                          <p className="text-sm font-medium">{displayValue(f, booking)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
               </Card>
             )
           })}
         </div>
-
-        {booking.remarks && (
-          <Card className="mb-6 ring-1 ring-gray-100 dark:ring-gray-800 shadow-sm">
-            <CardHeader className="py-2.5 px-4"><CardTitle className="text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</CardTitle></CardHeader>
-            <CardContent className="px-4 pb-3"><p className="text-sm">{booking.remarks}</p></CardContent>
-          </Card>
-        )}
 
         {booking.status !== "completed" && booking.status !== "rejected" && (
           <Card className="mb-6 ring-1 ring-gray-100 dark:ring-gray-800 shadow-sm">

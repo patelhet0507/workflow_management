@@ -4,21 +4,14 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth"
+import { ROLES } from "@/lib/constants"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Building2 } from "lucide-react"
 
-const roles = [
-  { value: "data_entry", label: "Data Entry" },
-  { value: "KYC", label: "KYC" },
-  { value: "CRM", label: "CRM" },
-  { value: "CSO", label: "CSO" },
-  { value: "management", label: "Management" },
-  { value: "admin", label: "Admin" },
-  { value: "super_admin", label: "Super Admin" },
-]
+const roles = ROLES
 
 export default function RegisterPage() {
   const { register } = useAuth()
@@ -26,7 +19,7 @@ export default function RegisterPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState("data_entry")
+  const [role, setRole] = useState("sales")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 

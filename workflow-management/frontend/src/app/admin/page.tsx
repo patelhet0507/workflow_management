@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth"
 import { api, type UserData, type StageDef } from "@/lib/api"
+import { ROLES } from "@/lib/constants"
 import AppLayout from "@/components/app-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -11,15 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ArrowUp, ArrowDown, Save, Plus, X } from "lucide-react"
 
-const roles = [
-  { value: "data_entry", label: "Data Entry" },
-  { value: "KYC", label: "KYC" },
-  { value: "CRM", label: "CRM" },
-  { value: "CSO", label: "CSO" },
-  { value: "management", label: "Management" },
-  { value: "admin", label: "Admin" },
-  { value: "super_admin", label: "Super Admin" },
-]
+const roles = ROLES
 
 export default function AdminPage() {
   const { user, isLoading } = useAuth()
@@ -28,7 +21,7 @@ export default function AdminPage() {
   const [newEmail, setNewEmail] = useState("")
   const [newName, setNewName] = useState("")
   const [newPassword, setNewPassword] = useState("")
-  const [newRole, setNewRole] = useState("data_entry")
+  const [newRole, setNewRole] = useState("sales")
   const [msg, setMsg] = useState("")
   const [flow, setFlow] = useState<StageDef[]>([])
   const [flowMsg, setFlowMsg] = useState("")

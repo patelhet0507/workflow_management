@@ -19,10 +19,40 @@ export interface BookingData {
   sd_value?: number
   payment_plan?: string
   source_of_booking?: string
+  remarks?: string
+  cso_sign?: string
+  kyc_upload?: string
+  crm_team_sign?: string
+  management_sign?: string
+  ats_approval?: string
+  sale_deed_approval?: string
+  management_approval?: string
+  email_sent?: boolean
+  client_confirmation?: string
+  application_no_ats?: string
+  application_no_sale_deed?: string
+  basic_amount?: number
+  gst?: number
+  running_maintenance?: number
+  maintenance_deposit?: number
+  stamp_duty?: number
+  legal_charges?: number
+  png_charges?: number
+  tds?: number
+  loan_cheque_dd_date?: string
+  bank_name?: string
+  cheque_no?: string
+  amount?: number
+  client_signature_date?: string
+  execution_date?: string
+  index_ii?: boolean
+  certified_copy?: boolean
+  document_scan?: boolean
+  sales_close?: boolean
+  final_remarks?: string
   status: string
   sales_exec_id: string
   sales_exec_name?: string
-  remarks?: string
   created_at?: Timestamp
   updated_at?: Timestamp
   is_deleted?: boolean
@@ -48,10 +78,25 @@ const USERS = "users"
 const SUPER_ADMIN_EMAIL = "patelhet.0507@gmail.com"
 
 const DEFAULT_FLOW: StageDef[] = [
-  { status: "booking_created", role: "KYC" },
-  { status: "kyc_approved", role: "CRM" },
-  { status: "crm_approved", role: "CSO" },
-  { status: "cso_approved", role: "management" },
+  { status: "booking_completed", role: "sales" },
+  { status: "unit_allocated", role: "sales" },
+  { status: "kyc_pending", role: "crm" },
+  { status: "kyc_completed", role: "crm" },
+  { status: "crm_approved", role: "management" },
+  { status: "management_approval_pending", role: "management" },
+  { status: "ats_approved", role: "documentation" },
+  { status: "sale_deed_approved", role: "documentation" },
+  { status: "print_requested", role: "crm_documentation" },
+  { status: "documents_printed", role: "legal" },
+  { status: "legal_verification_pending", role: "legal" },
+  { status: "accounts_verification_pending", role: "accounts" },
+  { status: "client_signature_pending", role: "crm_documentation" },
+  { status: "executed", role: "legal_execution" },
+  { status: "registration_completed", role: "legal_execution" },
+  { status: "index_ii_received", role: "legal_execution" },
+  { status: "document_scanned", role: "scan_verification" },
+  { status: "sales_closed", role: "sales_closing" },
+  { status: "archived", role: "admin" },
 ]
 
 async function getFlowConfig(): Promise<StageDef[]> {
@@ -84,7 +129,7 @@ export const api = {
     const cred = await signInWithEmailAndPassword(auth, email, password)
     let user = await getUser(cred.user.uid)
     if (!user) {
-      user = { id: cred.user.uid, name: cred.user.displayName || email.split("@")[0], email, role: "data_entry" }
+      user = { id: cred.user.uid, name: cred.user.displayName || email.split("@")[0], email, role: "sales" }
       await setDoc(doc(db, USERS, cred.user.uid), user)
     }
     const token = await cred.user.getIdToken()
@@ -105,7 +150,7 @@ export const api = {
 
   async getBookings(uid?: string, role?: string) {
     const constraints: any[] = [where("is_deleted", "==", false)]
-    if (role === "data_entry" && uid) constraints.push(where("sales_exec_id", "==", uid))
+    if (role === "sales" && uid) constraints.push(where("sales_exec_id", "==", uid))
     const snap = await getDocs(query(collection(db, BOOKINGS), ...constraints))
     const bookings = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as BookingData[]
     bookings.sort((a, b) => ((b.created_at?.toMillis() ?? 0) - (a.created_at?.toMillis() ?? 0)))
@@ -119,14 +164,18 @@ export const api = {
   },
 
   async createBooking(data: Partial<BookingData>, uid: string, name: string, role: string) {
-    if (role !== "data_entry" && role !== "super_admin") throw new Error("Only data entry users can create bookings")
+    if (role !== "sales" && role !== "admin" && role !== "super_admin") throw new Error("Only Sales users can create bookings")
     const ref = await addDoc(collection(db, BOOKINGS), {
       ...data, sales_exec_id: uid, sales_exec_name: name,
-      status: "booking_created", is_deleted: false,
+      status: "booking_completed", is_deleted: false,
       created_at: Timestamp.now(), updated_at: Timestamp.now(),
     })
     const snap = await getDoc(ref)
     return { id: snap.id, ...snap.data() } as BookingData
+  },
+
+  async updateBooking(id: string, updates: Partial<BookingData>) {
+    await updateDoc(doc(db, BOOKINGS, id), { ...updates, updated_at: Timestamp.now() })
   },
 
   async approveBooking(bookingId: string, action: string, comment: string | undefined, userId: string, userName: string, userRole: string) {
@@ -142,7 +191,7 @@ export const api = {
       if (userRole !== stage.role && userRole !== "super_admin") throw new Error(`Only ${stage.role} can approve at this stage`)
     }
 
-    const statuses = ["booking_created", ...flow.map((s) => s.status), "completed"]
+    const statuses = ["booking_completed", ...flow.map((s) => s.status), "completed"]
     const idx = statuses.indexOf(currentStatus)
     const newStatus = action === "approve" ? (idx < statuses.length - 1 ? statuses[idx + 1] : currentStatus) : "rejected"
 
@@ -161,7 +210,7 @@ export const api = {
 
   async getDashboardStats(uid?: string, role?: string) {
     const constraints: any[] = [where("is_deleted", "==", false)]
-    if (role === "data_entry" && uid) constraints.push(where("sales_exec_id", "==", uid))
+    if (role === "sales" && uid) constraints.push(where("sales_exec_id", "==", uid))
     const snap = await getDocs(query(collection(db, BOOKINGS), ...constraints))
     const bookings = snap.docs.map((d) => d.data())
     return {

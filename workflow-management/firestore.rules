@@ -21,13 +21,13 @@ service cloud.firestore {
     // ---- Users ----
     // Signed-in user may read/write only their own profile.
     // Role can never be self-promoted: self-registration is locked to the lowest
-    // role (data_entry); only an admin may set or change any other role.
+    // role (sales); only an admin may set or change any other role.
     // NOTE: the first admin/super_admin must be promoted manually (console or
     // script), because nobody can self-bootstrap the admin role.
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
       allow list: if isAdmin();
-      allow create: if signedIn() && (isAdmin() || (request.auth.uid == uid && request.resource.data.role == 'data_entry'));
+      allow create: if signedIn() && (isAdmin() || (request.auth.uid == uid && request.resource.data.role == 'sales'));
       allow update: if signedIn() && (isAdmin() || (request.auth.uid == uid && request.resource.data.role == resource.data.role));
       allow delete: if isAdmin();
     }
@@ -40,14 +40,14 @@ service cloud.firestore {
     }
 
     // ---- Bookings ----
-    // Everyone signed-in reads; data_entry + admin creates; any workflow role
+    // Everyone signed-in reads; sales + admin creates; any workflow role
     // updates (approve/reject writes status + approval doc).
     // ponytail: status transitions are enforced in app code (api.approveBooking),
     // not in rules. Add rules-side stage validation (read config/approval_flow
     // and check role() matches) if client-side bypass becomes a real risk.
     match /bookings/{id} {
       allow read: if signedIn();
-      allow create: if signedIn() && role() in ['data_entry', 'admin', 'super_admin'];
+      allow create: if signedIn() && role() in ['sales', 'admin', 'super_admin'];
       allow update: if signedIn();
       allow delete: if isSuperAdmin();
 

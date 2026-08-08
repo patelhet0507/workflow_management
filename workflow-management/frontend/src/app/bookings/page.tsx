@@ -5,19 +5,13 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth"
 import { api } from "@/lib/api"
+import { statusLabel } from "@/lib/constants"
 import AppLayout from "@/components/app-layout"
 import { Badge } from "@/components/ui/badge"
 import { Search, Plus } from "lucide-react"
 
 const statusColors: Record<string, "default" | "secondary" | "success" | "destructive" | "outline"> = {
-  booking_created: "secondary", completed: "success", rejected: "destructive",
-}
-
-function stageLabel(status: string): string {
-  if (status === "booking_created") return "Created"
-  if (status === "completed") return "Done"
-  if (status === "rejected") return "Rejected"
-  return status.replace(/_/g, " ")
+  completed: "success", rejected: "destructive", archived: "secondary",
 }
 
 export default function BookingsPage() {
@@ -45,7 +39,7 @@ export default function BookingsPage() {
           <span className="w-1 h-6 bg-blue-600 rounded-full inline-block" />
           Bookings
         </h1>
-        {(user.role === "data_entry" || user.role === "super_admin") && (
+        {(user.role === "sales" || user.role === "admin" || user.role === "super_admin") && (
           <Link href="/bookings/new" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md text-sm font-medium bg-blue-600 text-white shadow hover:bg-blue-700 transition-colors">
             <Plus className="w-4 h-4" /> New Booking
           </Link>
@@ -70,7 +64,7 @@ export default function BookingsPage() {
               <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
                 <td className="p-3 font-medium">{b.client_name}</td>
                 <td className="p-3 text-gray-600 dark:text-gray-400">{b.project_name}</td>
-                <td className="p-3"><Badge variant={statusColors[b.status] || "outline"}>{stageLabel(b.status)}</Badge></td>
+                <td className="p-3"><Badge variant={statusColors[b.status] || "outline"}>{statusLabel(b.status)}</Badge></td>
                 <td className="p-3 text-gray-600 dark:text-gray-400">{b.payment_plan || "-"}</td>
                 <td className="p-3"><Link href={`/bookings/${b.id}`} className="text-blue-600 hover:text-blue-700 text-xs font-medium">View →</Link></td>
               </tr>

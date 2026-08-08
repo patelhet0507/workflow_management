@@ -32,12 +32,12 @@ export default function NewBookingPage() {
   const [error, setError] = useState("")
   const [form, setForm] = useState({
     client_confirmation_date: "", onboarding_date: "", project_name: "",
-    unit_no: "", client_name: "", sd_value: "", payment_plan: "", source_of_booking: "",
+    unit_no: "", client_name: "", sd_value: "", payment_plan: "", source_of_booking: "", remarks: "",
   })
 
   useEffect(() => { if (!isLoading && !user) router.push("/login") }, [user, isLoading, router])
 
-  const handleChange = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+  const handleChange = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm({ ...form, [key]: e.target.value })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,6 +84,9 @@ export default function NewBookingPage() {
               </div>
               <SelectField options={paymentPlans} value={form.payment_plan} onChange={(v) => setForm({ ...form, payment_plan: v })} label="Payment Plan" />
               <SelectField options={bookingSources} value={form.source_of_booking} onChange={(v) => setForm({ ...form, source_of_booking: v })} label="Source of Booking" />
+              <div className="space-y-2"><Label>Remarks</Label>
+                <textarea value={form.remarks || ""} onChange={handleChange("remarks")} placeholder="Optional notes..."
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" /></div>
               {error && <p className="text-sm text-red-500 bg-red-50 dark:bg-red-950/50 px-3 py-2 rounded-md">{error}</p>}
               <div className="flex gap-3 pt-2">
                 <Button type="submit" className="bg-blue-600 hover:bg-blue-700">Create Booking</Button>

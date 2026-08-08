@@ -56,8 +56,9 @@ export default function LoginPage() {
         </p>
         <div className="mt-6 text-xs text-gray-400 space-y-1 border-t pt-4 dark:border-gray-800">
           <p className="font-medium">Roles:</p>
-          <p>data_entry - Can create bookings</p>
+          <p>sales - Can create bookings</p>
           <p>super_admin - Full access, admin panel</p>
+          <p>Other teams (CRM, Legal, Accounts, etc.) approve at their stage</p>
         </div>
       </div>
     </div>

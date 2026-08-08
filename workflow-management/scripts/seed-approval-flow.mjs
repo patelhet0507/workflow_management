@@ -11,10 +11,25 @@ const CLIENT_ID = "563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleuser
 const CLIENT_SECRET = "j9iVZfS8kkCEFUPaAeJV0sAi";
 
 const stages = [
-  { status: "booking_created", role: "KYC" },
-  { status: "kyc_approved", role: "CRM" },
-  { status: "crm_approved", role: "CSO" },
-  { status: "cso_approved", role: "management" },
+  { status: "booking_completed", role: "sales" },
+  { status: "unit_allocated", role: "sales" },
+  { status: "kyc_pending", role: "crm" },
+  { status: "kyc_completed", role: "crm" },
+  { status: "crm_approved", role: "management" },
+  { status: "management_approval_pending", role: "management" },
+  { status: "ats_approved", role: "documentation" },
+  { status: "sale_deed_approved", role: "documentation" },
+  { status: "print_requested", role: "crm_documentation" },
+  { status: "documents_printed", role: "legal" },
+  { status: "legal_verification_pending", role: "legal" },
+  { status: "accounts_verification_pending", role: "accounts" },
+  { status: "client_signature_pending", role: "crm_documentation" },
+  { status: "executed", role: "legal_execution" },
+  { status: "registration_completed", role: "legal_execution" },
+  { status: "index_ii_received", role: "legal_execution" },
+  { status: "document_scanned", role: "scan_verification" },
+  { status: "sales_closed", role: "sales_closing" },
+  { status: "archived", role: "admin" },
 ];
 
 const configPath = path.join(os.homedir(), ".config", "configstore", "firebase-tools.json");
