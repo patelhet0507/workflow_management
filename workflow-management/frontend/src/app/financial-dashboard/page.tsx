@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import AppLayout from "@/components/app-layout";
-import { ChartBar, FileChart, Wallet, Clock } from "lucide-react";
+import { ChartBar, Wallet, Clock } from "lucide-react";
 
 const components = {
   basicAmount: "₹0",

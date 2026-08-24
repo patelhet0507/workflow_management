@@ -61,15 +61,13 @@ const MyTasks = () => {
               </div>
               <div className="flex items-center gap-4 mb-6">
                 <span className="chip bg-blue-50 text-blue-600 px-3 py-1 rounded text-xs font-medium">My Tasks ({myTasks.length})</span>
-                <span
-                  className={`
-                    chip ${pendingWithOthers ? 'bg-blue-50 text-blue-600' : 'bg-gray-300 text-gray-500'}
-                    px-3 py-1 rounded text-xs font-medium
-                  `
+                <button
+                  type="button"
                   onClick={() => setPendingWithOthers(!pendingWithOthers)}
+                  className={`chip px-3 py-1 rounded text-xs font-medium ${pendingWithOthers ? 'bg-blue-50 text-blue-600' : 'bg-gray-300 text-gray-500'}`}
                 >
                   Pending with Others
-                </span>
+                </button>
               </div>
 
               <div className="bg-white dark:bg-gray-900 p-4 rounded-lg shadow-sm mb-6">
