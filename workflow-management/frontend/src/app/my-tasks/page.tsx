@@ -15,9 +15,32 @@ const MyTasks = () => {
     { project: "Trident Experia", unit: "B-904", customer: "M. Rao", document: "ATS", stage: "Ledger Check", dateReceived: "27 Jul", daysPending: 1, physicalHolder: "CFO", action: "Open →" }
   ]);
   const [pendingWithOthers, setPendingWithOthers] = useState(false);
+  const [others, setOthers] = useState<any[]>([]);
 
   useEffect(() => {
     if (!isLoading && !user) return void router.push("/login");
+    if (user) Promise.all([api.getBookings(), api.getApprovalFlow().catch(()=>[] as any)]).then(([bookings, flow])=>{
+      const map: Record<string,string> = {}; (flow as any[]).forEach((s:any)=> map[s.status]=s.role)
+      const alias: Record<string,string[]> = { legal:["crm","accounts"], crm_executive:["crm"] }
+      const my = bookings.filter(b=> {
+        if (b.status==="completed"||b.status==="rejected"||(b as any).lifecycle_status==="CANCELLED") return false
+        const req = map[b.status]; if(!req) return false
+        if (user.role===req || user.role==="super_admin") return true
+        const acting = alias[req]||[]
+        return acting.includes(user.role)
+      }).map(b=> ({ project: b.project_name||"-", unit: b.unit_no, customer: b.client_name, document: b.is_direct_sale_deed?"Sale Deed (Direct)": b.status.includes("ats")?"ATS":"Sale Deed", stage: b.status, dateReceived: b.updated_at? new Date(b.updated_at.toMillis()).toLocaleDateString(): "-", daysPending: b.created_at? Math.floor((Date.now()-b.created_at.toMillis())/864e5):0, physicalHolder: (b as any).current_holder||"-", id: b.id, action:"Open →" }))
+      if (my.length>0) setMyTasks(my as any)
+      const other = bookings.filter(b=> {
+        if (b.status==="completed"||b.status==="rejected"||(b as any).lifecycle_status==="CANCELLED") return false
+        const req = map[b.status]; if(!req) return false
+        if (req===user.role) return false
+        const acting = alias[req]||[]
+        if (acting.includes(user.role)) return false
+        if (user.role==="super_admin") return false
+        return true
+      }).slice(0,5).map(b=> ({ project: b.project_name||"-", unit: b.unit_no, customer: b.client_name, document: b.is_direct_sale_deed?"Direct":"Sale Deed", stage: b.status, days: b.created_at? Math.floor((Date.now()-b.created_at.toMillis())/864e5):0, holder: map[b.status]||"-" }))
+      setOthers(other as any)
+    }).catch(()=>{})
   }, [user, isLoading, router]);
 
   return (
@@ -60,8 +83,8 @@ const MyTasks = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#EDE6CE]/40">
-                    {myTasks.map((task, index) => (
-                      <tr key={index} className="hover:bg-[#C5A05A]/5 transition">
+                    {myTasks.map((task:any, index) => (
+                      <tr key={index} className="hover:bg-[#C5A05A]/5 transition cursor-pointer" onClick={()=> task.id && router.push(`/bookings/${task.id}`)}>
                         <td className="p-3 text-xs">{task.project}</td>
                         <td className="p-3 font-semibold">{task.unit}</td>
                         <td className="p-3 text-sm">{task.customer}</td>
@@ -80,7 +103,7 @@ const MyTasks = () => {
               {pendingWithOthers && (
                 <div className="mt-4 p-4 rounded-xl bg-amber-50/60 border border-amber-200/60">
                   <p className="text-xs font-bold text-[#8A7E6E] uppercase tracking-wider mb-2">"Pending with Others" (§87)</p>
-                  <span className="chip bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1 rounded-full text-xs font-medium">A-101 — Sale Deed — Pending with Legal Executive — 3 days</span>
+                  <div className="flex flex-wrap gap-2">{others.length===0? <span className="chip bg-white/60 text-[#8A7E6E] border px-3 py-1 rounded-full text-xs">No pending with others</span> : others.map((o:any,i:number)=>(<span key={i} className="chip bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1 rounded-full text-xs font-medium">{o.unit} — {o.document} — Pending with {o.holder} — {o.days} days</span>))}</div>
                 </div>
               )}
               <p className="text-xs text-[#8A7E6E] mt-3 italic">My Tasks is scoped to stages this user's role (or an active delegation) can act on — same eligibility rule as the workflow action screen's role gate. Clicking any row opens the Workflow Action screen directly at that stage.</p>

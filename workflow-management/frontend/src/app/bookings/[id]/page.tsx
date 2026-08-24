@@ -79,7 +79,7 @@ export default function BookingDetailPage() {
     if (user.role !== stage.role) return { allowed: false, reason: `Only ${roleLabel(stage.role)} can approve at this stage` }
     return { allowed: true }
   }
-  const canEditGroup = (group: FieldGroup): boolean => { if (!user) return false; return group.owners.includes(user.role) }
+  const canEditGroup = (group: FieldGroup): boolean => { if (!user) return false; return group.owners.includes(user.role) || group.owners.includes((user.role||"").toLowerCase()) }
   const startEdit = (group: FieldGroup) => { const d: Record<string, string | boolean> = {}; group.fields.forEach((f) => { const v = booking[f.key]; d[f.key] = f.type === "checkbox" ? !!v : (v === undefined || v === null ? "" : String(v)) }); setDraft(d); setEditingGroup(group.key); setSaveError("") }
   const saveGroup = async (group: FieldGroup) => {
     if (!id) return; setSaveError(""); const updates: Record<string, any> = {}; group.fields.forEach((f) => { const v = draft[f.key]; if (f.type === "checkbox") { updates[f.key] = !!v; return } const s = v === undefined ? "" : String(v).trim(); if (s === "") { updates[f.key] = null; return } updates[f.key] = f.type === "number" ? parseFloat(s) : s }); try { await api.updateBooking(id, updates); setEditingGroup(null); load() } catch (err: any) { setSaveError(err.message || "Save failed") }

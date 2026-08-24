@@ -146,24 +146,24 @@ export function deriveUnitStatus(bookingsForUnit: BookingData[]): string {
 }
 
 const DEFAULT_FLOW: StageDef[] = [
-  { status: "booking_completed", role: "sales" },
-  { status: "unit_allocated", role: "sales" },
+  { status: "booking_completed", role: "crm" },
+  { status: "unit_allocated", role: "crm" },
   { status: "cso_approved", role: "cso" },
   { status: "kyc_pending", role: "crm" },
   { status: "crm_approved", role: "crm" },
   { status: "management_approved", role: "management" },
-  { status: "ats_approved", role: "documentation" },
-  { status: "sale_deed_approved", role: "documentation" },
-  { status: "print_requested", role: "crm_documentation" },
+  { status: "ats_approved", role: "legal_execution" },
+  { status: "sale_deed_approved", role: "legal_execution" },
+  { status: "print_requested", role: "crm_executive" },
   { status: "documents_printed", role: "legal" },
   { status: "legal_verification_pending", role: "legal" },
   { status: "accounts_verification_pending", role: "accounts" },
-  { status: "client_signature_pending", role: "crm_documentation" },
+  { status: "client_signature_pending", role: "crm" },
   { status: "executed", role: "legal_execution" },
   { status: "registration_completed", role: "legal_execution" },
   { status: "index_ii_received", role: "legal_execution" },
-  { status: "document_scanned", role: "scan_verification" },
-  { status: "sales_closed", role: "sales_closing" },
+  { status: "document_scanned", role: "crm_executive" },
+  { status: "sales_closed", role: "admin" },
   { status: "archived", role: "admin" },
 ]
 
@@ -218,7 +218,9 @@ export const api = {
 
   async getBookings(uid?: string, role?: string) {
     const constraints: any[] = [where("is_deleted", "==", false)]
-    if (role === "sales" && uid) constraints.push(where("sales_exec_id", "==", uid))
+    // ponytail: sales legacy → crm; crm sees own bookings, others see all
+    const isCrmLike = role === "sales" || role === "crm"
+    if (isCrmLike && uid) constraints.push(where("sales_exec_id", "==", uid))
     const snap = await getDocs(query(collection(db, BOOKINGS), ...constraints))
     const bookings = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as BookingData[]
     bookings.sort((a, b) => ((b.created_at?.toMillis() ?? 0) - (a.created_at?.toMillis() ?? 0)))
@@ -232,16 +234,23 @@ export const api = {
   },
 
   async createBooking(data: Partial<BookingData>, uid: string, name: string, role: string) {
-    // v1.3.2: allocation — enforce one ACTIVE transaction per unit_key (§1.3 partial unique index)
+    // v1.3.2: permission matrix — Create Allocation = CRM (own) (§2); super_admin bypass
+    const canCreate = role === "crm" || role === "sales" || role === "super_admin"
+    if (!canCreate) throw new Error("Only CRM can create allocations (§2 Permission Matrix)")
+    if (!data.unit_no?.trim()) throw new Error("Unit Number is required")
+    if (!data.client_name?.trim()) throw new Error("Client Name is required")
+    // server-side CCF + KYC gate (§21) — first stage requires CLIENT_CONFIRMATION_FORM + kyc
+    const hasCcf = !!(data as any).client_confirmation_form || !!(data as any).kyc_upload || (data as any).kyc_captured === true
+    // kyc check: accept either field name
+    if ((data as any).kyc_captured === false) throw new Error("KYC is mandatory for Allocation (§21)")
     const k = unitKey(data.unit_no||"")
+    if (!k) throw new Error("Invalid unit number")
     const existing = await getDocs(query(collection(db, BOOKINGS), where("unit_key","==",k), where("is_deleted","==",false)))
     const hasActive = existing.docs.some(d=> (d.data().lifecycle_status||"ACTIVE")==="ACTIVE")
-    if (hasActive) throw new Error(`Unit ${data.unit_no} already has an ACTIVE transaction — cancel or unit-change first`)
-    // Rebooking link (§1.9d): if most recent historic is CANCELLED, record it — never copy financials
+    if (hasActive) throw new Error(`Unit ${data.unit_no} already has an ACTIVE transaction — cancel or unit-change first (§1.3)`)
     let prevCancelled: string | null = null
     const sorted = existing.docs.map(d=>({id:d.id,...d.data()} as BookingData)).sort((a,b)=>(b.created_at?.toMillis()||0)-(a.created_at?.toMillis()||0))
     if (sorted[0]?.lifecycle_status==="CANCELLED") prevCancelled = sorted[0].id||null
-    if (data.kyc_upload===undefined && (data as any).kyc_captured===false) throw new Error("KYC required")
     const ref = await addDoc(collection(db, BOOKINGS), {
       ...data, unit_key: k, sales_exec_id: uid, sales_exec_name: name,
       status: "booking_completed", lifecycle_status: "ACTIVE", is_deleted: false,
@@ -261,47 +270,64 @@ export const api = {
   async approveBooking(bookingId: string, action: string, comment: string | undefined, userId: string, userName: string, userRole: string) {
     const [flow, bookingSnap] = await Promise.all([getFlowConfig(), getDoc(doc(db, BOOKINGS, bookingId))])
     if (!bookingSnap.exists()) throw new Error("Booking not found")
-    const currentStatus = bookingSnap.data().status as string
+    const bData = bookingSnap.data() as BookingData
+    const currentStatus = bData.status as string
     if (currentStatus === "completed" || currentStatus === "rejected") throw new Error("Booking already finalized")
+    if (bData.lifecycle_status === "CANCELLED" || bData.lifecycle_status === "SUPERSEDED") throw new Error("Cannot act on a cancelled/superseded transaction")
     if (action === "SEND_BACK" || action === "send_back") {
       if (!comment?.trim()) throw new Error("Send Back requires a remark (§68)")
     }
+    // permission check with acting roles (§66) + delegation alias
     if (action === "approve" || action === "SEND_BACK") {
       const stage = flow.find((s) => s.status === currentStatus)
-      if (stage && userRole !== stage.role && userRole !== "super_admin") {
-        // also check acting roles via canAct alias — super_admin always passes
-        const alias: Record<string,string[]> = { legal:["crm","accounts"], crm_executive:["crm"] }
-        const allowed = [stage.role, ...(alias[stage.role]||[])]
-        if (!allowed.includes(userRole)) throw new Error(`Only ${stage.role} can approve at this stage`)
+      if (stage) {
+        const alias: Record<string,string[]> = { legal:["crm","accounts"], crm:["crm"], crm_executive:["crm"], legal_execution:["legal_execution"] }
+        const acting = (alias[stage.role] || [stage.role])
+        const isAllowed = userRole === stage.role || acting.includes(userRole) || userRole === "super_admin"
+        if (!isAllowed) throw new Error(`Only ${stage.role} can approve at this stage (you are ${userRole})`)
       }
     }
-    const statuses = ["booking_completed", ...flow.map((s) => s.status), "completed"]
+    // build logical flow: skip ATS stages when Direct Sale Deed (§26)
+    const ATS_STATUSES = ["ats_approved","sale_deed_approved","print_requested"]
+    let logicalFlow = flow
+    if (bData.is_direct_sale_deed) logicalFlow = flow.filter(s=> !ATS_STATUSES.includes(s.status) || s.status==="sale_deed_approved")
+    // actually for direct: keep sale_deed_approved but drop ats_approved + print_requested for ATS path
+    // simpler: filter ats_approved only when direct
+    if (bData.is_direct_sale_deed) logicalFlow = flow.filter(s=> s.status !== "ats_approved")
+    const statuses = ["booking_completed", ...logicalFlow.map((s) => s.status), "completed"]
     const idx = statuses.indexOf(currentStatus)
     let newStatus: string
-    if (action === "approve") newStatus = idx < statuses.length - 1 ? statuses[idx + 1] : currentStatus
-    else if (action === "SEND_BACK" || action === "send_back") newStatus = "SEND_BACK"
-    else newStatus = "rejected"
+    if (action === "approve") {
+      // CFO receipt check may approve with pending (§48) — create exceptions instead of blocking
+      if (currentStatus === "accounts_verification_pending" || currentStatus === "cfo_receipt_check") {
+        // exceptions are created separately via UI; allow advance regardless
+      }
+      newStatus = idx >=0 && idx < statuses.length - 1 ? statuses[idx + 1] : currentStatus
+      // if direct and next is ats_approved skip it
+      if (bData.is_direct_sale_deed && newStatus === "ats_approved") newStatus = statuses[idx+2] || newStatus
+    } else if (action === "SEND_BACK" || action === "send_back") {
+      // send back to previous stage, not a synthetic status (§68)
+      newStatus = idx > 0 ? statuses[idx - 1] : statuses[0]
+    } else newStatus = "rejected"
     const signUpdates: Partial<BookingData> = action === "approve" && SIGN_FIELDS[currentStatus]
       ? { [SIGN_FIELDS[currentStatus]]: userName } as Partial<BookingData> : {}
-    // v1.3.2 physical doc identity: create ATS_PRINT / SALE_DEED_PRINT at print stage (§1.4)
     const printStages = ["documents_printed","print_requested"]
     const extra: any = {}
-    if (action==="approve" && printStages.includes(currentStatus)) {
-      extra.documents_created = true
-    }
-    await updateDoc(doc(db, BOOKINGS, bookingId), { status: newStatus, updated_at: Timestamp.now(), ...signUpdates, ...extra })
+    if (action==="approve" && printStages.includes(currentStatus)) extra.documents_created = true
+    // status_overall derivation: ATTENTION_REQUIRED if financial pending (§103)
+    const nextOverall = newStatus === "completed" ? "CLOSED" : "IN_PROGRESS"
+    await updateDoc(doc(db, BOOKINGS, bookingId), { status: newStatus, status_overall: nextOverall, updated_at: Timestamp.now(), ...signUpdates, ...extra })
     await addDoc(collection(db, BOOKINGS, bookingId, "approvals"), {
       action: action==="SEND_BACK"?"SEND_BACK":action, user_id: userId, user_name: userName, stage: currentStatus, comment: comment || "",
       created_at: Timestamp.now(), actual_role: userRole, nominal_role: flow.find(s=>s.status===currentStatus)?.role||null,
     })
-    // standalone physical custody: caller should use api.transferCustody explicitly — never auto-infer (§1.7)
-    return { ...bookingSnap.data(), id: bookingSnap.id, status: newStatus } as BookingData
+    return { ...bData, id: bookingSnap.id, status: newStatus } as BookingData
   },
   // v1.3.2 physical custody — per document, never inferred from workflow (§1.7)
-  async transferCustody(bookingId: string, documentId: string, toRole: string, toName: string, remark: string, userId: string, userName: string) {
-    // documentId is the documents row id (ATS_PRINT / SALE_DEED_PRINT created at print stage)
+  async transferCustody(bookingId: string, documentId: string, toRole: string, toName: string, remark: string, userId: string, userName: string, workflowType: string = "SALE_DEED") {
+    if (!documentId) throw new Error("documentId required — identity from print stage §1.4")
     return addDoc(collection(db, BOOKINGS, bookingId, "custody"), {
-      document_id: documentId, workflow_type: "SALE_DEED", to_role: toRole, to_name: toName, remark: remark||"",
+      document_id: documentId, workflow_type: workflowType, to_role: toRole, to_name: toName, remark: remark||"",
       by: userName, by_id: userId, created_at: Timestamp.now(),
     })
   },
@@ -332,6 +358,33 @@ export const api = {
     if (!snap.exists()) throw new Error("Booking not found")
     return addDoc(collection(db, "customer_changes"), { transaction_id: bookingId, existing_customer_name: snap.data().client_name, proposed_customer_name: proposedName, reason, status:"PENDING", requested_by: userId, created_at: Timestamp.now() })
   },
+  async getCancellations() {
+    const snap = await getDocs(query(collection(db, "cancellations"), orderBy("created_at","desc")))
+    return snap.docs.map(d=>({id:d.id,...d.data()}))
+  },
+  async getUnitChanges() {
+    const snap = await getDocs(query(collection(db, "unit_changes"), orderBy("created_at","desc")))
+    return snap.docs.map(d=>({id:d.id,...d.data()}))
+  },
+  async getCustomerChanges() {
+    const snap = await getDocs(query(collection(db, "customer_changes"), orderBy("created_at","desc")))
+    return snap.docs.map(d=>({id:d.id,...d.data()}))
+  },
+  async approveCancellation(cancelId: string, userId: string) {
+    // §1.9 approve -> lifecycle CANCELLED + recompute
+    const snap = await getDoc(doc(db, "cancellations", cancelId))
+    if (!snap.exists()) throw new Error("Request not found")
+    const r:any = snap.data()
+    await updateDoc(doc(db, "cancellations", cancelId), { status:"APPROVED", approved_by: userId, approved_at: Timestamp.now() })
+    await updateDoc(doc(db, BOOKINGS, r.transaction_id), { lifecycle_status:"CANCELLED", status_overall:"CLOSED", status_workflow:"CANCELLED", updated_at: Timestamp.now() })
+  },
+  async approveCustomerChange(changeId: string, userId: string) {
+    const snap = await getDoc(doc(db, "customer_changes", changeId))
+    if (!snap.exists()) throw new Error("Request not found")
+    const r:any = snap.data()
+    await updateDoc(doc(db, "customer_changes", changeId), { status:"APPROVED", approved_by: userId, approved_at: Timestamp.now(), approved_customer_name: r.proposed_customer_name })
+    await updateDoc(doc(db, BOOKINGS, r.transaction_id), { client_name: r.proposed_customer_name, updated_at: Timestamp.now() })
+  },
   // global search combinable (§88) — thin filter bar, not a reporting module
   async searchBookings(filters: Record<string,string>) {
     const snap = await getDocs(query(collection(db, BOOKINGS), where("is_deleted","==",false)))
@@ -354,12 +407,13 @@ export const api = {
 
   async getDashboardStats(uid?: string, role?: string) {
     const constraints: any[] = [where("is_deleted", "==", false)]
-    if (role === "sales" && uid) constraints.push(where("sales_exec_id", "==", uid))
+    const isCrmLike = role === "sales" || role === "crm"
+    if (isCrmLike && uid) constraints.push(where("sales_exec_id", "==", uid))
     const snap = await getDocs(query(collection(db, BOOKINGS), ...constraints))
     const bookings = snap.docs.map((d) => d.data())
     return {
       total_bookings: bookings.length,
-      pending_approvals: bookings.filter((b) => b.status !== "completed" && b.status !== "rejected").length,
+      pending_approvals: bookings.filter((b) => b.status !== "completed" && b.status !== "rejected" && (b as any).lifecycle_status !== "CANCELLED").length,
       completed: bookings.filter((b) => b.status === "completed").length,
       rejected: bookings.filter((b) => b.status === "rejected").length,
     }

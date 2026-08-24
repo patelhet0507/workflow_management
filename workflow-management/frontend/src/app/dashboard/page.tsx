@@ -51,13 +51,21 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [sortCol, setSortCol] = useState("days");
   const [live, setLive] = useState<any[] | null>(null);
-  useEffect(()=>{ if(user) api.getBookings(user.id, user.role).then(b=>{
+  const [pendingLive, setPendingLive] = useState<Record<string,number> | null>(null);
+  const [summaryLive, setSummaryLive] = useState<any | null>(null);
+  useEffect(()=>{ if(user) Promise.all([api.getBookings(user.id, user.role), api.getApprovalFlow().catch(()=>[]) as any]).then(([b, flow])=>{
     if(b.length===0) return;
-    // group by unit_key for derived unit status (§1.3a)
     const byUnit: Record<string,any[]> = {}
     b.forEach(x=>{ const k=(x as any).unit_key||x.unit_no; (byUnit[k]=byUnit[k]||[]).push(x)})
     const rows = b.map(x=>({ project: x.project_name||"-", unit: x.unit_no, customer: x.client_name, crm: x.sales_exec_name||"-", workflow: x.is_direct_sale_deed?"Direct Sale Deed": x.status, stage: x.status, holder: (x as any).current_holder||"-", days: x.created_at? Math.floor((Date.now()-x.created_at.toMillis())/86400000):0, pending: (x as any).financial_exceptions?.filter((e:any)=>e.status==="OPEN").length||0, overall: x.status_overall==="ATTENTION_REQUIRED"?"attention":"in-progress", id: x.id }))
     setLive(rows)
+    // pending by role — map current status → required role (§78)
+    const flowMap: Record<string,string> = {}; (flow as any[]).forEach((s:any)=> flowMap[s.status]=s.role)
+    const counts: Record<string,number> = {}; b.forEach(x=>{ if(x.status==="completed"||x.status==="rejected"||(x as any).lifecycle_status==="CANCELLED") return; const r = flowMap[x.status] || "unknown"; counts[r]=(counts[r]||0)+1 })
+    setPendingLive(counts)
+    // unit summary live (§78)
+    const active = b.filter(x=> (x as any).lifecycle_status!=="CANCELLED" && (x as any).lifecycle_status!=="SUPERSEDED")
+    setSummaryLive({ total: Object.keys(byUnit).length, pending: active.filter(x=>x.status==="booking_completed").length, ats: active.filter(x=> (x as any).sale_deed_in_progress || x.status.includes("ats")).length, saleDeed: active.filter(x=> x.status.includes("legal")||x.status.includes("accounts")).length, direct: active.filter(x=> x.is_direct_sale_deed).length, completed: active.filter(x=>x.status==="completed").length, cancelled: b.filter(x=> (x as any).lifecycle_status==="CANCELLED").length })
   }).catch(()=>{})},[user])
   const source = live ?? UNITS
   const sorted = [...source].sort((a, b) => (sortCol === "days" ? (b.days - a.days) : a.overall.localeCompare(b.overall)));
@@ -99,15 +107,16 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Pending by Role */}
+            {/* Pending by Role — live from flow mapping, fallback demo */}
             <div className="glass-card p-6">
-              <h3 className="font-editorial text-lg text-[#141623] mb-4">Pending by Role (§78)</h3>
+              <div className="flex items-center justify-between mb-4"><h3 className="font-editorial text-lg text-[#141623]">Pending by Role (§78)</h3>{pendingLive && <span className="text-[11px] text-[#8A7E6E] bg-[#C5A05A]/10 px-2 py-0.5 rounded-full border border-[#C5A05A]/20">live</span>}</div>
               <div className="flex flex-wrap gap-2">
-                {PENDING_BY_ROLE.map((r) => (
-                  <span key={r.role} className="text-xs px-3 py-1 rounded-full bg-gradient-to-r from-[#C5A05A]/10 to-[#C5A05A]/5 border border-[#C5A05A]/20 text-[#8A6F3B]">
-                    {r.role}: <span className="font-bold text-[#141623]">{r.count}</span>
+                {(pendingLive ? Object.entries(pendingLive) : PENDING_BY_ROLE.map(r=>[r.role,r.count] as const)).map(([role,count]:any) => (
+                  <span key={String(role)} className="text-xs px-3 py-1 rounded-full bg-gradient-to-r from-[#C5A05A]/10 to-[#C5A05A]/5 border border-[#C5A05A]/20 text-[#8A6F3B]">
+                    {String(role).toUpperCase()}: <span className="font-bold text-[#141623]">{count as number}</span>
                   </span>
                 ))}
+                {!pendingLive && <span className="text-[11px] text-[#8A7E6E] ml-2">(demo — no bookings yet)</span>}
               </div>
             </div>
 

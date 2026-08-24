@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/lib/auth";
+import { api } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import AppLayout from "@/components/app-layout";
 import HeroIntro from "@/components/hero-intro";
@@ -23,7 +26,11 @@ const STAGES = [
   { key: "HANDOVER", label: "Customer Handover", role: "CRM_EXECUTIVE" },
 ];
 
-export default function WorkflowActionPage() {
+function WorkflowActionInner() {
+  const { user } = useAuth();
+  const params = useSearchParams();
+  const bookingId = params.get("id") || params.get("booking") || "";
+  const [booking, setBooking] = useState<any>(null);
   const [currentStageIndex, setCurrentStageIndex] = useState(6);
   const [remark, setRemark] = useState("");
   const [sendBackRemark, setSendBackRemark] = useState("");
@@ -32,19 +39,30 @@ export default function WorkflowActionPage() {
     { stage: "MANAGEMENT_APPROVE_3", user: "A. Sharma (MANAGEMENT)", action: "APPROVE", time: "26 Jul 10:30 AM" },
     { stage: "CUSTOMER_SIGNATURE", user: "R. Mehta (CRM)", action: "SUBMIT", time: "26 Jul 11:00 AM" },
   ]);
+  const [bookings, setBookings] = useState<any[]>([]);
+
+  useEffect(()=>{
+    if (bookingId) api.getBooking(bookingId).then(b=>{ setBooking(b); const idx = STAGES.findIndex(s=> s.key.toLowerCase()=== (b.status||"").toLowerCase() || s.label.toLowerCase().includes((b.status||"").replace(/_/g," ")) ); if(idx>=0) setCurrentStageIndex(idx); api.getBookingHistory(bookingId).then(h=> setActionLog(h.map((x:any)=>({ stage: x.stage, user:`${x.user_name} (${x.actual_role||x.stage})`, action: x.action, time: x.created_at?.toMillis? new Date(x.created_at.toMillis()).toLocaleString(): "" })))).catch(()=>{}) }).catch(()=>{})
+    else api.getBookings().then(setBookings).catch(()=>{})
+  },[bookingId]);
 
   const current = STAGES[currentStageIndex];
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!remark.trim()) { alert("Remark required per §68 for formal actions."); return; }
-    setActionLog((prev) => [...prev, { stage: current.label, user: "You (LEGAL_EXECUTIVE)", action: "APPROVE", time: new Date().toLocaleString() }]);
+    if (bookingId && user) {
+      try { await api.approveBooking(bookingId, "approve", remark, user.id, user.name, user.role); const b=await api.getBooking(bookingId); setBooking(b); setActionLog(prev=>[...prev, { stage: current.label, user:`You (${user.role})`, action:"APPROVE", time: new Date().toLocaleString()}]) } catch(e:any){ alert(e.message); return}
+    } else setActionLog((prev) => [...prev, { stage: current.label, user: "You (LEGAL_EXECUTIVE)", action: "APPROVE", time: new Date().toLocaleString() }]);
     if (currentStageIndex < STAGES.length - 1) setCurrentStageIndex((i) => i + 1);
     setRemark("");
   };
 
-  const handleSendBack = () => {
+  const handleSendBack = async () => {
     if (!sendBackRemark.trim()) { alert("Send-back remark is mandatory (§68)."); return; }
-    setActionLog((prev) => [...prev, { stage: current.label, user: "You (LEGAL_EXECUTIVE)", action: "SEND_BACK", time: new Date().toLocaleString(), remark: sendBackRemark }]);
+    if (bookingId && user) {
+      try { await api.approveBooking(bookingId, "SEND_BACK", sendBackRemark, user.id, user.name, user.role); } catch(e:any){ alert(e.message); return}
+    }
+    setActionLog((prev) => [...prev, { stage: current.label, user: user? `You (${user.role})`:"You (LEGAL_EXECUTIVE)", action: "SEND_BACK", time: new Date().toLocaleString(), remark: sendBackRemark }]);
     setSendBackRemark("");
     setShowSendBack(false);
   };
@@ -56,6 +74,18 @@ export default function WorkflowActionPage() {
         <AppLayout>
           <div className="max-w-5xl space-y-10">
             <HeroIntro />
+            {!bookingId && bookings.length>0 && (
+              <div className="glass-card p-5">
+                <p className="text-xs font-bold text-[#8A7E6E] uppercase tracking-widest mb-2">Select a real booking to drive this workflow — or use demo below</p>
+                <div className="flex gap-2 flex-wrap">{bookings.slice(0,6).map(b=> <a key={b.id} href={`/workflow-action?id=${b.id}`} className="text-xs px-3 py-1.5 rounded-full border border-[#C5A05A]/20 bg-white/60 hover:bg-[#C5A05A]/10 text-[#8A6F3B]">{b.unit_no} · {b.client_name} · {b.status}</a>)}</div>
+              </div>
+            )}
+            {booking && (
+              <div className="glass-card p-5 border-[#C5A05A]/30">
+                <p className="text-xs font-bold text-[#8A7E6E] uppercase tracking-widest">Linked booking</p>
+                <p className="font-semibold text-[#141623]">{booking.unit_no} · {booking.client_name} · {booking.project_name||"-"} · <span className="text-[#8A6F3B]">{booking.status}</span> {booking.is_direct_sale_deed && <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">Direct</span>}</p>
+              </div>
+            )}
 
             {/* Identity Glass Card */}
             <motion.section
@@ -310,4 +340,8 @@ export default function WorkflowActionPage() {
       </div>
     </div>
   );
+}
+
+export default function WorkflowActionPage(){
+  return <Suspense fallback={<div className="min-h-screen bg-gradient-to-b from-[#F8F4E8] via-[#EDE6CE] to-[#F0E8D4] flex items-center justify-center text-[#8A7E6E] text-sm">Loading workflow…</div>}><WorkflowActionInner/></Suspense>
 }

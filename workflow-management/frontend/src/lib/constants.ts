@@ -109,7 +109,7 @@ export const FIELD_GROUPS: FieldGroup[] = [
   {
     key: "ats_sale_deed",
     label: "ATS & Sale Deed",
-    owners: ["documentation", "management", "admin", "super_admin", "legal", "legal_execution"],
+    owners: ["management", "admin", "super_admin", "legal", "legal_execution", "accounts"],
     fields: [
       { key: "ats_approval", label: "ATS Approval" },
       { key: "sale_deed_approval", label: "Sale Deed Approval" },
@@ -119,7 +119,7 @@ export const FIELD_GROUPS: FieldGroup[] = [
   {
     key: "print_request",
     label: "Print Request",
-    owners: ["crm_executive", "admin", "super_admin", "crm_documentation"],
+    owners: ["crm_executive", "admin", "super_admin", "crm"],
     fields: [
       { key: "email_sent", label: "Email Sent", type: "checkbox" },
       { key: "client_confirmation", label: "Client Confirmation" },
@@ -128,7 +128,7 @@ export const FIELD_GROUPS: FieldGroup[] = [
   {
     key: "registration",
     label: "Registration",
-    owners: ["legal_execution", "admin", "super_admin"],
+    owners: ["legal_execution", "admin", "super_admin", "accounts"],
     fields: [
       { key: "application_no_ats", label: "Application No. (ATS)" },
       { key: "application_no_sale_deed", label: "Application No. (Sale Deed)" },
@@ -160,7 +160,7 @@ export const FIELD_GROUPS: FieldGroup[] = [
   {
     key: "closing",
     label: "Closing",
-    owners: ["scan_verification", "sales_closing", "admin", "super_admin", "crm_executive"],
+    owners: ["crm_executive", "admin", "super_admin"],
     fields: [
       { key: "document_scan", label: "Document Scan", type: "checkbox" },
       { key: "sales_close", label: "Sales Close", type: "checkbox" },
