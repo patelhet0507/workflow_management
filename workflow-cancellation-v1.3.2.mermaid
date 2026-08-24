@@ -1,0 +1,41 @@
+stateDiagram-v2
+    [*] --> Requested: CRM raises Cancellation Request\n(reason, date, financial_implications flag)
+
+    note left of Requested
+        v1.3.2: approval sequence below is CONFIGURATION-DRIVEN — read
+        from the CANCELLATION workflow definition's active version
+        (§1.6, §1.9), same engine as ATS/Sale Deed. This diagram shows
+        the DEFAULT configuration a fresh install ships with, not
+        hard-coded application logic.
+    end note
+
+    Requested --> CFO_Pending: financial_implications = true\n(default config: CFO stage applicable_if_financial_implications = TRUE)
+    Requested --> Mgmt_Pending: financial_implications = false\n(default config: CFO stage skipped, same pattern as Direct Sale Deed skipping ATS)
+
+    CFO_Pending --> Mgmt_Pending: CFO Approves
+    CFO_Pending --> Requested: CFO Sends Back (remark mandatory)
+
+    Mgmt_Pending --> Approved: Management Approves
+    Mgmt_Pending --> Requested: Management Sends Back (remark mandatory)
+
+    Approved --> [*]: Transaction.lifecycle_status → CANCELLED
+
+    note right of Approved
+        On approval (via recompute_unit_status, §1.3b — one
+        authoritative function, not scattered app-layer logic):
+        - transaction.lifecycle_status = CANCELLED
+        - units.status recomputed → CANCELLED
+          (partial unique index on transactions.unit_id
+           WHERE lifecycle_status = 'ACTIVE' no longer
+           blocks a new transaction against this unit)
+        - the cancelled transaction is NEVER deleted —
+          full workflow_actions / documents / financial
+          history stays permanently queryable, unmodified
+        - a later transaction (rebooking) may be created
+          against the same unit; it is a fully separate row,
+          created via the NORMAL Allocation process, with its
+          OWN independent financial snapshot — never copied
+          from this one. See workflow-cancellation-rebooking
+          note and §1.9c/§1.9d for the full rule.
+    end note
+

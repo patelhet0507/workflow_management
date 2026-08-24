@@ -1,0 +1,40 @@
+stateDiagram-v2
+    [*] --> Requested: CRM raises Unit Change Request\n(old_transaction_id, old_unit_id, new_unit_id, reason)
+
+    Requested --> Mgmt_Pending: submitted
+    Mgmt_Pending --> Approved: Management Approves
+    Mgmt_Pending --> Requested: Management Sends Back (remark mandatory)
+
+    Approved --> [*]: New Transaction created (old transaction historically preserved)
+
+    note right of Approved
+        The OLD transaction is historically preserved throughout: its
+        original unit_id, booking/financial baseline, documents, and
+        workflow/audit history are never overwritten or reassigned.
+        Only its lifecycle status changes. On approval:
+        1. Old Transaction.lifecycle_status: ACTIVE → SUPERSEDED
+           (unit_id itself is never changed — it stays the
+           permanent historical record for its original unit)
+        2. New Transaction created fresh:
+           - unit_id = new_unit_id
+           - source_transaction_id = old_transaction.id
+           - source_change_type = 'UNIT_CHANGE'
+           - lifecycle_status = ACTIVE
+           - booking/financial fields copied as a starting
+             point, independently editable/re-lockable
+        3. unit_change_requests.new_transaction_id populated
+           — old and new transactions now navigable both ways:
+           forward via unit_change_requests, backward via
+           new_transaction.source_transaction_id
+        Before step 2, the API validates: old txn still ACTIVE, request
+        still PENDING, new unit exists and has no ACTIVE transaction of
+        its own — rejecting with a clear error otherwise, not just
+        relying on the database's partial unique index to fail loudly.
+    end note
+
+    note left of Requested
+        Old unit's status recomputes once its transaction
+        is SUPERSEDED, same trigger as Cancellation —
+        SUPERSEDED and CANCELLED are both excluded from
+        the "one ACTIVE transaction per unit" index.
+    end note

@@ -1,0 +1,20 @@
+%% Carried forward unchanged from v1.2 — no correction in the v1.3 change list applied to this diagram.
+
+stateDiagram-v2
+    [*] --> CRM_Draft: CRM starts allocation
+
+    CRM_Draft --> CRM_Draft: Missing CCF upload or KYC checkbox\n(blocked server-side, §21)
+    CRM_Draft --> CSO_Pending: CRM submits\n(CCF + KYC present)
+
+    CSO_Pending --> Mgmt_Allocation_Pending: CSO Approves
+    CSO_Pending --> CRM_Draft: CSO Sends Back\n(remark mandatory)
+
+    Mgmt_Allocation_Pending --> Allocation_Approved: Management Approves\n(financials locked here, §19)
+    Mgmt_Allocation_Pending --> CRM_Draft: Management Sends Back\n(remark mandatory)
+
+    Allocation_Approved --> [*]: Unit status → ALLOCATION_APPROVED\nATS + Sale Deed workflows unlocked
+
+    note right of Allocation_Approved
+        This is Management Approval #1 of 3
+        (independent of ATS / Sale Deed approvals, §22)
+    end note

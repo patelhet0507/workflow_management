@@ -1,0 +1,53 @@
+%% v1.3.2: restructured so Financial Exception reads as a parallel/independent side-effect,
+%% never a workflow stage the transaction must pass through. Business rule is unchanged from
+%% v1.3/v1.3.1 (CFO can approve with pending receipts; workflow continues regardless) — this is
+%% a diagram-only correction, per the v1.3.2 change request item 5.
+
+stateDiagram-v2
+    [*] --> SD_Mgmt_Pending: CRM requests Sale Deed Execution Approval\n(mandatory even for Direct Sale Deed, §43)
+
+    SD_Mgmt_Pending --> Legal_Print_Pending: Management Approves\n(Management Approval #3 of 3)
+    SD_Mgmt_Pending --> SD_Mgmt_Pending: Management Sends Back
+
+    Legal_Print_Pending --> Legal_Manager_Check: Legal Executive prepares/prints,\nGarvi reference entered\n(v1.3.2: this print creates a documents row,\ntype SALE_DEED_PRINT, from this moment on — §1.4)
+
+    Legal_Manager_Check --> CFO_Receipt_Check: Legal Manager Approves
+    Legal_Manager_Check --> Legal_Print_Pending: Legal Manager Sends Back
+
+    state CFO_Receipt_Check {
+        [*] --> Checking_Components
+        Checking_Components --> Checking_Components: Tick each component\nBasic / GST / Maint. / Deposit /\nStamp Duty / Legal / PNG / TDS\n+ Loan Cheque details
+        Checking_Components --> [*]: CFO Approves\n(even with components still unticked)
+    }
+
+    state cfo_fork <<fork>>
+    CFO_Receipt_Check --> cfo_fork: CFO Approves
+
+    %% Main workflow path — this is the ONLY path the Sale Deed workflow itself follows.
+    cfo_fork --> Customer_Signature_Pending: workflow ALWAYS continues here,\nregardless of receipt status (§48)
+
+    %% Parallel, independent side-effect — NOT a workflow stage. financial_exceptions is its
+    %% own state, tracked outside workflow_instances entirely (§1.5), closed independently
+    %% whenever CFO later marks a component received — with no bearing on workflow progression.
+    cfo_fork --> Financial_Exception_Open: IF any component was left\nunticked at approval (§48) —\na parallel/independent state,\nnot a stage of this workflow
+    Financial_Exception_Open --> Financial_Exception_Resolved: Component later marked received\n(independent of workflow stage)
+    Financial_Exception_Open --> Financial_Exception_Open: Notify CFO, Management, CRM\n(persists regardless of workflow progress, §50)
+
+    Customer_Signature_Pending --> Legal_Final_Verification: CRM obtains customer signature
+
+    Legal_Final_Verification --> SRO_Registration_Pending: Legal Manager final Approve
+    Legal_Final_Verification --> Customer_Signature_Pending: Legal Manager Sends Back
+
+    SRO_Registration_Pending --> Garvi_Downloads_Pending: Registration no., date,\nexecution date entered by Legal Executive\n(units.status → SALE_DEED_REGISTERED\nas soon as this happens — independent of\nwhat's below, and independent of any open\nfinancial exception, v1.3.2 §1.3a)
+
+    Garvi_Downloads_Pending --> Admin_Scan_Pending: Legal Exec confirms\nIndex II + Certified Copy downloaded
+    Garvi_Downloads_Pending --> Admin_Scan_Pending: OR Management Skip Permission\n(remark + audit, §54)
+
+    Admin_Scan_Pending --> Admin_Scan_Pending: Blocked until Sales Close\nConfirmation ticked
+    Admin_Scan_Pending --> CRMExec_Scan_Check: Admin confirms scan +\nAccounts copy + Sales Close\n(post-scan financial alert fires\nif exceptions still open, §52)
+
+    CRMExec_Scan_Check --> Handover_Pending: CRM Exec marks Scan Verified
+
+    Handover_Pending --> SaleDeed_Completed: Handover date + signed\nreceiving copy uploaded
+
+    SaleDeed_Completed --> [*]: status_document = Completed.\nunits.status → COMPLETED only if zero OPEN\nfinancial_exceptions at this point, else\nFINANCIAL_EXCEPTION (v1.3.2 §1.3a) — the\nFinancial_Exception_Open state above may\nstill be unresolved here, and that's fine;\nit closes on its own timeline, not this one's.
