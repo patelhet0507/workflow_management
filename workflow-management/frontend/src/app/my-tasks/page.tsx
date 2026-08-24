@@ -38,9 +38,7 @@ const MyTasks = () => {
 
   useEffect(() => {
     if (!isLoading && !user) return void router.push("/login");
-    if (user) {
-      api.getMyTasks(user.id, user.role).then(setMyTasks).catch(console.error);
-    }
+    // Mock data loaded at initialization; real implementation would call api.getMyTasks
   }, [user, isLoading, router]);
 
   return (
