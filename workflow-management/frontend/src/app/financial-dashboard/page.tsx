@@ -30,7 +30,7 @@ const FinancialDashboard = () => {
   useEffect(() => {
     if (!isLoading && !user) return void router.push("/login");
     if (user) {
-      api.getFinancialDashboardStats(user.id, user.role).then(setStats).catch(console.error);
+      api.getDashboardStats(user.id, user.role).then(setStats).catch(console.error);
     }
   }, [user, isLoading, router]);
 
