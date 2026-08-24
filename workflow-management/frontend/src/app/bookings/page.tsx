@@ -54,22 +54,24 @@ export default function BookingsPage() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-800/50"><tr>
             <th className="text-left p-3 font-medium text-gray-500">Customer</th>
-            <th className="text-left p-3 font-medium text-gray-500">Project</th>
+            <th className="text-left p-3 font-medium text-gray-500">Project · Unit</th>
             <th className="text-left p-3 font-medium text-gray-500">Status</th>
+            <th className="text-left p-3 font-medium text-gray-500">Lifecycle</th>
             <th className="text-left p-3 font-medium text-gray-500">Plan</th>
             <th className="text-left p-3 font-medium text-gray-500"></th>
           </tr></thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {filtered.map((b) => (
               <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
-                <td className="p-3 font-medium">{b.client_name}</td>
-                <td className="p-3 text-gray-600 dark:text-gray-400">{b.project_name}</td>
+                <td className="p-3 font-medium">{b.client_name} {b.is_direct_sale_deed && <span className="ml-1 text-[10px] px-1 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">Direct</span>}{b.previous_cancelled_transaction_id && <span className="ml-1 text-[10px] px-1 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">Rebooking</span>}</td>
+                <td className="p-3 text-gray-600 dark:text-gray-400">{b.project_name} · {b.unit_no}</td>
                 <td className="p-3"><Badge variant={statusColors[b.status] || "outline"}>{statusLabel(b.status)}</Badge></td>
+                <td className="p-3 text-xs">{b.lifecycle_status||"ACTIVE"}</td>
                 <td className="p-3 text-gray-600 dark:text-gray-400">{b.payment_plan || "-"}</td>
                 <td className="p-3"><Link href={`/bookings/${b.id}`} className="text-blue-600 hover:text-blue-700 text-xs font-medium">View →</Link></td>
               </tr>
             ))}
-            {filtered.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-gray-400">No bookings found</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-gray-400">No bookings found</td></tr>}
           </tbody>
         </table>
       </div>

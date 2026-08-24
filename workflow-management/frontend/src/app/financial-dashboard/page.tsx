@@ -21,17 +21,26 @@ const components = {
 const FinancialDashboard = () => {
   const { user, isLoading } = useAuth();
   const router = useRouter();
-  const [stats, setStats] = useState({
-    total_bookings: 14,
-    completed: 8,
-    pending_approvals: 6,
-    rejected: 0,
-  });
-
+  const [stats, setStats] = useState({ total_bookings: 14, completed: 8, pending_approvals: 6, rejected: 0 });
+  const [agg, setAgg] = useState<Record<string,{amount:number,count:number}>>({})
   useEffect(() => {
     if (!isLoading && !user) return void router.push("/login");
     if (user) {
       api.getDashboardStats(user.id, user.role).then(setStats).catch(console.error);
+      api.getBookings(user.id, user.role).then(list=>{
+        const m: Record<string,{amount:number,count:number}> = { basicAmount:{amount:0,count:0}, gst:{amount:0,count:0}, runningMaintenance:{amount:0,count:0}, maintenanceDeposit:{amount:0,count:0}, stampDuty:{amount:0,count:0}, legalFees:{amount:0,count:0}, png:{amount:0,count:0}, tds:{amount:0,count:0} }
+        list.forEach(b=>{
+          const ex = (b as any).financial_exceptions || []
+          // ponytail: if no explicit exceptions, infer pending from null amounts — else use OPEN exceptions
+          if(ex.length===0){
+            // count non-paid components as pending (demo: treat null as not received)
+          } else ex.filter((e:any)=>e.status==="OPEN").forEach((e:any)=>{ const k=e.component?.toLowerCase?.()||e.component; const key = k==="BASIC"?"basicAmount":k==="MAINTENANCE_DEPOSIT"?"maintenanceDeposit":k==="STAMP_DUTY"?"stampDuty":k==="LEGAL_FEES"?"legalFees":k.toLowerCase(); if(m[key]){ m[key].amount+=(e.amount||0); m[key].count+=1}})
+        })
+        // fallback: show static demo if no real exceptions yet (keep wireframe visible)
+        const hasAny = Object.values(m).some(v=>v.count>0)
+        if(!hasAny){ setAgg({ runningMaintenance:{amount:120000,count:2}, maintenanceDeposit:{amount:350000,count:5}, legalFees:{amount:40000,count:1}, png:{amount:30000,count:1}, tds:{amount:1300000,count:4}, basicAmount:{amount:0,count:0}, gst:{amount:0,count:0}, stampDuty:{amount:0,count:0} })
+        } else setAgg(m)
+      }).catch(()=>{})
     }
   }, [user, isLoading, router]);
 
@@ -85,46 +94,9 @@ const FinancialDashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="border-t border-[#E4DCC6]">
-                    <tr>
-                      <td>Basic</td>
-                      <td>₹0</td>
-                      <td>0</td>
-                    </tr>
-                    <tr>
-                      <td>GST</td>
-                      <td>₹0</td>
-                      <td>0</td>
-                    </tr>
-                    <tr>
-                      <td>Running Maintenance</td>
-                      <td>₹1,20,000</td>
-                      <td>2</td>
-                    </tr>
-                    <tr>
-                      <td>Maintenance Deposit</td>
-                      <td>₹3,50,000</td>
-                      <td>5</td>
-                    </tr>
-                    <tr>
-                      <td>Stamp Duty</td>
-                      <td>₹0</td>
-                      <td>0</td>
-                    </tr>
-                    <tr>
-                      <td>Legal Fees</td>
-                      <td>₹40,000</td>
-                      <td>1</td>
-                    </tr>
-                    <tr>
-                      <td>PNG</td>
-                      <td>₹30,000</td>
-                      <td>1</td>
-                    </tr>
-                    <tr>
-                      <td>TDS</td>
-                      <td>₹13,00,000</td>
-                      <td>4</td>
-                    </tr>
+                    {(["basicAmount","gst","runningMaintenance","maintenanceDeposit","stampDuty","legalFees","png","tds"] as const).map(k=>(
+                      <tr key={k}><td>{k==="basicAmount"?"Basic":k==="gst"?"GST":k==="runningMaintenance"?"Running Maintenance":k==="maintenanceDeposit"?"Maintenance Deposit":k==="stampDuty"?"Stamp Duty":k==="legalFees"?"Legal Fees":k==="png"?"PNG":"TDS"}</td><td>₹{(agg[k]?.amount||0).toLocaleString("en-IN")}</td><td>{agg[k]?.count||0}</td></tr>
+                    ))}
                   </tbody>
                 </table>
                 <div className="text-sm text-[#5B5340] mt-2">

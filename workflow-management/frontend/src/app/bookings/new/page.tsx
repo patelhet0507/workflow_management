@@ -16,6 +16,8 @@ export default function NewBookingPage() {
   const [error, setError] = useState("")
   const [fields, setFields] = useState<BookingFieldDef[]>([])
   const [values, setValues] = useState<Record<string, string>>({})
+  const [isDirect, setIsDirect] = useState(false)
+  const [directRemark, setDirectRemark] = useState("")
 
   useEffect(() => { if (!isLoading && !user) router.push("/login") }, [user, isLoading, router])
   useEffect(() => {
@@ -32,11 +34,14 @@ export default function NewBookingPage() {
     for (const f of fields) {
       if (f.required && !String(values[f.key] || "").trim()) return setError(`"${f.label}" is required`)
     }
+    if (isDirect && !directRemark.trim()) return setError("Direct Sale Deed requires a remark (§26)")
     const data: Record<string, any> = {}
     fields.forEach((f) => {
       if (f.type === "checkbox") { data[f.key] = values[f.key] === "true"; return }
       data[f.key] = String(values[f.key] || "").trim()
     })
+    data.is_direct_sale_deed = isDirect
+    if (isDirect) data.direct_sale_deed_remark = directRemark.trim()
     try {
       await api.createBooking(data, user.id, user.name, user.role)
       router.push("/bookings")
@@ -97,6 +102,10 @@ export default function NewBookingPage() {
                   </div>
                 </div>
               ))}
+              <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+                <label className="flex items-center gap-2 text-sm mb-2"><input type="checkbox" checked={isDirect} onChange={e=>setIsDirect(e.target.checked)} /> Direct Sale Deed Case — skip ATS (v1.3.2 §26)</label>
+                {isDirect && <><p className="text-xs text-gray-500 mb-1">ATS shown as Skipped/N-A, never pending; Sale Deed Management gate still mandatory.</p><input value={directRemark} onChange={e=>setDirectRemark(e.target.value)} placeholder="Direct Sale Deed remark (mandatory)" className="flex h-9 w-full rounded-md border border-input px-3 py-1 text-sm" /></>}
+              </div>
               <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Sign-offs (done by respective teams after creation)</p>
                 <div className="flex flex-wrap gap-2">

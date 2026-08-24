@@ -1,23 +1,25 @@
-export interface RoleOption {
-  value: string
-  label: string
-}
+export interface RoleOption { value: string; label: string }
 
+// v1.3.2 spec — 9 canonical roles (§1.1 role_code). Legacy aliases kept for compat.
 export const ROLES: RoleOption[] = [
-  { value: "sales", label: "Sales" },
-  { value: "cso", label: "CSO" },
-  { value: "crm", label: "CRM" },
-  { value: "management", label: "Management" },
-  { value: "documentation", label: "Documentation (Bharti)" },
-  { value: "crm_documentation", label: "CRM Documentation (Ruchika)" },
-  { value: "legal", label: "Legal (Pranav)" },
-  { value: "accounts", label: "Accounts (Vaibhav)" },
-  { value: "legal_execution", label: "Legal Execution (Nidhi)" },
-  { value: "scan_verification", label: "Scan Verification (Dipak)" },
-  { value: "sales_closing", label: "Sales Closing (Gautam)" },
-  { value: "admin", label: "Admin" },
   { value: "super_admin", label: "Super Admin" },
+  { value: "crm", label: "CRM" },
+  { value: "crm_executive", label: "CRM Executive" },
+  { value: "cso", label: "CSO" },
+  { value: "management", label: "Management" },
+  { value: "legal_execution", label: "Legal Executive" },
+  { value: "legal", label: "Legal Manager" },
+  { value: "accounts", label: "CFO" },
+  { value: "admin", label: "Admin Executive" },
 ]
+
+// Legacy aliases → canonical (so old Firestore role values still resolve)
+const ROLE_ALIAS: Record<string,string> = {
+  sales: "crm", crm_documentation: "crm_executive", documentation: "crm_documentation",
+  legal_execution: "legal_execution", scan_verification: "crm_executive", sales_closing: "admin",
+  crm_executive: "crm_executive",
+}
+export function canonicalRole(r: string): string { return ROLE_ALIAS[r] || r }
 
 export const ROLE_LABELS: Record<string, string> = Object.fromEntries(ROLES.map((r) => [r.value, r.label]))
 
@@ -45,32 +47,69 @@ export const FLOW_LABELS: Record<string, string> = {
   rejected: "Rejected",
 }
 
-export function statusLabel(s: string): string {
-  return FLOW_LABELS[s] || s.replace(/_/g, " ")
+export function statusLabel(s: string): string { return FLOW_LABELS[s] || s.replace(/_/g, " ") }
+export function roleLabel(role: string): string { return ROLE_LABELS[canonicalRole(role)] || role.replace(/_/g, " ") }
+
+// ── v1.3.2 unit status model (§1.3a) — 12 derived values, single source of truth
+export const UNIT_STATUSES = [
+  "AVAILABLE","ALLOCATION_PENDING","ALLOCATION_APPROVED","ATS_IN_PROCESS","ATS_REGISTERED",
+  "SALE_DEED_IN_PROCESS","SALE_DEED_REGISTERED","COMPLETED","FINANCIAL_EXCEPTION","CANCELLED","UNIT_CHANGED","SUPERSEDED",
+] as const
+export type UnitStatus = typeof UNIT_STATUSES[number]
+
+// v1.3.2: transaction lifecycle vs progress are separate dimensions
+export type LifecycleStatus = "ACTIVE" | "CANCELLED" | "SUPERSEDED"
+
+// ponytail: single recompute function — mirrors §1.3b recompute_unit_status(unit_id)
+// Inputs: transaction + workflow progress + exceptions + registration. Pure, testable.
+export function recomputeUnitStatus(input: {
+  activeTransaction: { lifecycle_status: string; workflow_status?: string } | null
+  mostRecentHistoric?: { lifecycle_status: string } | null
+  atsRegistered?: boolean
+  saleDeedRegistered?: boolean
+  saleDeedCompleted?: boolean
+  hasOpenFinancialExceptions?: boolean
+  allocationCompleted?: boolean
+  atsWorkflowExists?: boolean
+  atsCompleted?: boolean
+  saleDeedInProgress?: boolean
+}): UnitStatus {
+  const t = input.activeTransaction
+  if (t) {
+    // Financial exception / completion takes precedence over SALE_DEED_REGISTERED
+    if (t.workflow_status === "FINANCIAL_EXCEPTION") return "FINANCIAL_EXCEPTION"
+    if (t.workflow_status === "COMPLETED" || input.saleDeedCompleted) {
+      return input.hasOpenFinancialExceptions ? "FINANCIAL_EXCEPTION" : "COMPLETED"
+    }
+    if (input.saleDeedRegistered) return "SALE_DEED_REGISTERED"
+    if (input.saleDeedInProgress) return "SALE_DEED_IN_PROCESS"
+    if (input.atsRegistered) return "ATS_REGISTERED"
+    if (input.atsWorkflowExists) return "ATS_IN_PROCESS"
+    if (input.allocationCompleted) return "ALLOCATION_APPROVED"
+    return "ALLOCATION_PENDING"
+  }
+  if (input.mostRecentHistoric) {
+    if (input.mostRecentHistoric.lifecycle_status === "CANCELLED") return "CANCELLED"
+    if (input.mostRecentHistoric.lifecycle_status === "SUPERSEDED") return "UNIT_CHANGED"
+  }
+  return "AVAILABLE"
 }
 
-export function roleLabel(role: string): string {
-  return ROLE_LABELS[role] || role.replace(/_/g, " ")
-}
+// Physical document types (§1.4 v1.3.2) — identity from print, before scan
+export const PHYSICAL_DOC_TYPES = ["ATS_PRINT","SALE_DEED_PRINT"] as const
+export const DIGITAL_DOC_TYPES = ["ATS_SCAN","SALE_DEED_SCAN","CLIENT_CONFIRMATION_FORM","CUSTOMER_RECEIVING_COPY","LOAN_CHEQUE_PHOTO"] as const
 
-export interface FieldDef {
-  key: string
-  label: string
-  type?: "text" | "number" | "date" | "textarea" | "checkbox"
-}
+// Financial components (§1.5) — TDS included, never blocks registration
+export const FIN_COMPONENTS = ["BASIC","GST","RUNNING_MAINTENANCE","MAINTENANCE_DEPOSIT","STAMP_DUTY","LEGAL_FEES","PNG","TDS"] as const
 
-export interface FieldGroup {
-  key: string
-  label: string
-  owners: string[]
-  fields: FieldDef[]
-}
+export interface FieldDef { key: string; label: string; type?: "text" | "number" | "date" | "textarea" | "checkbox" }
+export interface FieldGroup { key: string; label: string; owners: string[]; fields: FieldDef[] }
 
 export const FIELD_GROUPS: FieldGroup[] = [
   {
     key: "ats_sale_deed",
     label: "ATS & Sale Deed",
-    owners: ["documentation", "management", "admin", "super_admin"],
+    owners: ["documentation", "management", "admin", "super_admin", "legal", "legal_execution"],
     fields: [
       { key: "ats_approval", label: "ATS Approval" },
       { key: "sale_deed_approval", label: "Sale Deed Approval" },
@@ -80,7 +119,7 @@ export const FIELD_GROUPS: FieldGroup[] = [
   {
     key: "print_request",
     label: "Print Request",
-    owners: ["crm_documentation", "admin", "super_admin"],
+    owners: ["crm_executive", "admin", "super_admin", "crm_documentation"],
     fields: [
       { key: "email_sent", label: "Email Sent", type: "checkbox" },
       { key: "client_confirmation", label: "Client Confirmation" },
@@ -121,11 +160,46 @@ export const FIELD_GROUPS: FieldGroup[] = [
   {
     key: "closing",
     label: "Closing",
-    owners: ["scan_verification", "sales_closing", "admin", "super_admin"],
+    owners: ["scan_verification", "sales_closing", "admin", "super_admin", "crm_executive"],
     fields: [
       { key: "document_scan", label: "Document Scan", type: "checkbox" },
       { key: "sales_close", label: "Sales Close", type: "checkbox" },
       { key: "final_remarks", label: "Final Remarks", type: "textarea" },
     ],
   },
+]
+
+// Workflow stage defs with acting roles + required docs (§1.6) — config-driven, not hardcoded per screen
+export const ALLOCATION_STAGES = [
+  { id: "crm_fill", requiredRole: "crm", acting: ["crm"], label: "CRM submits (CCF + KYC required)", docs: ["CLIENT_CONFIRMATION_FORM"] },
+  { id: "cso_approve", requiredRole: "cso", acting: ["cso"], label: "CSO Approval" },
+  { id: "mgmt_approve", requiredRole: "management", acting: ["management"], label: "Management Approval (1/3)" },
+]
+export const ATS_STAGES = [
+  { id: "crm_request", requiredRole: "crm", label: "CRM requests ATS Approval" },
+  { id: "mgmt_approve", requiredRole: "management", label: "Management Approval (2/3)" },
+  { id: "customer_email", requiredRole: "crm", label: "Customer ATS draft approval" },
+  { id: "legal_exec_print", requiredRole: "legal_execution", label: "Legal Exec: print ATS & Garvi" },
+  { id: "legal_mgr_check", requiredRole: "legal", acting: ["legal","crm","accounts"], label: "Legal Manager: ATS verification" },
+  { id: "cfo_ledger", requiredRole: "accounts", label: "CFO: ATS ledger check" },
+  { id: "customer_signature", requiredRole: "crm", label: "Customer ATS signature" },
+  { id: "legal_final", requiredRole: "legal", acting: ["legal","crm","accounts"], label: "Legal final verification" },
+  { id: "registration", requiredRole: "legal_execution", label: "ATS registration (SRO)" },
+  { id: "admin_scan", requiredRole: "admin", label: "Admin: scan, Accounts copy, Sales Close" },
+  { id: "scan_check", requiredRole: "crm_executive", label: "CRM Exec: scan check" },
+  { id: "handover", requiredRole: "crm_executive", label: "Customer handover" },
+]
+export const SALE_DEED_STAGES = [
+  { id: "crm_request", requiredRole: "crm", label: "CRM requests Sale Deed Approval" },
+  { id: "mgmt_approve", requiredRole: "management", label: "Management (3/3)" },
+  { id: "legal_exec_print", requiredRole: "legal_execution", label: "Legal Exec: print & Garvi" },
+  { id: "legal_mgr_check", requiredRole: "legal", acting: ["legal","crm","accounts"], label: "Legal Manager: verification" },
+  { id: "cfo_receipt_check", requiredRole: "accounts", label: "CFO: receipt checklist (may approve with pending)" },
+  { id: "customer_signature", requiredRole: "crm", label: "Customer Sale Deed signature" },
+  { id: "legal_final", requiredRole: "legal", acting: ["legal","crm","accounts"], label: "Legal final verification" },
+  { id: "registration", requiredRole: "legal_execution", label: "Sale Deed registration (SRO)" },
+  { id: "garvi_downloads", requiredRole: "legal_execution", label: "Index II / Certified Copy" },
+  { id: "admin_scan", requiredRole: "admin", label: "Admin: scan, Accounts copy, Sales Close" },
+  { id: "scan_check", requiredRole: "crm_executive", label: "CRM Exec: scan check" },
+  { id: "handover", requiredRole: "crm_executive", label: "Customer handover" },
 ]

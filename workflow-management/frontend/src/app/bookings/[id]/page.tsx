@@ -13,6 +13,25 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Pencil, Save, X } from "lucide-react"
+function CustodyPanel({ bookingId }: { bookingId: string }) {
+  const { user } = useAuth()
+  const [log, setLog] = useState<any[]>([])
+  const [docId, setDocId] = useState("ATS_PRINT")
+  const [toRole, setToRole] = useState("legal")
+  const [remark, setRemark] = useState("")
+  const load = ()=> api.getCustodyLog(bookingId).then(setLog).catch(()=>{})
+  useEffect(()=>{ load() },[bookingId])
+  return (<>
+    <div className="flex gap-2 flex-wrap items-center mb-3">
+      <select value={docId} onChange={e=>setDocId(e.target.value)} className="h-8 rounded border border-input bg-white px-2 text-xs"><option value="ATS_PRINT">ATS Print</option><option value="SALE_DEED_PRINT">Sale Deed Print</option></select>
+      <select value={toRole} onChange={e=>setToRole(e.target.value)} className="h-8 rounded border border-input bg-white px-2 text-xs"><option value="crm">CRM</option><option value="legal">Legal Manager</option><option value="legal_execution">Legal Exec</option><option value="accounts">CFO</option><option value="admin">Admin</option></select>
+      <input value={remark} onChange={e=>setRemark(e.target.value)} placeholder="Remark" className="h-8 rounded border border-input px-2 text-xs flex-1 min-w-[120px]" />
+      <Button size="sm" onClick={async()=>{ await api.transferCustody(bookingId, docId, toRole, "", remark, user?.id||"self", user?.name||"self"); setRemark(""); load()}}>Transfer</Button>
+    </div>
+    {log.length===0? <p className="text-xs text-gray-400">No custody transfers yet — latest per document shown above when present.</p> :
+      <table className="w-full text-xs"><thead><tr className="text-gray-400 text-left"><th className="py-1">Document</th><th>To</th><th>At</th><th>Remark</th></tr></thead><tbody>{log.slice().reverse().map((c:any,i:number)=>(<tr key={i} className="border-t"><td className="py-1">{c.document_id}</td><td>{c.to_role}</td><td>{c.created_at?.toMillis? new Date(c.created_at.toMillis()).toLocaleString():""}</td><td>{c.remark||"—"}</td></tr>))}</tbody></table>}
+  </>)
+}
 
 const statusColors: Record<string, "default" | "secondary" | "success" | "destructive" | "outline"> = {
   booking_completed: "secondary",
@@ -163,7 +182,25 @@ export default function BookingDetailPage() {
             <span className="w-1 h-6 bg-blue-600 rounded-full inline-block" />
             {booking.client_name || "Booking"}
           </h1>
-          <Badge variant={statusColors[booking.status] || "outline"}>{statusLabel(booking.status)}</Badge>
+          <div className="flex items-center gap-2">
+            {booking.previous_cancelled_transaction_id && <Badge variant="outline" className="border-amber-300 text-amber-700">Rebooking · linked to {String(booking.previous_cancelled_transaction_id).slice(0,6)}</Badge>}
+            {booking.source_transaction_id && <Badge variant="outline" className="border-blue-300 text-blue-700">Unit Change · from {String(booking.source_transaction_id).slice(0,6)}</Badge>}
+            {booking.is_direct_sale_deed && <Badge variant="outline" className="border-purple-300 text-purple-700">Direct Sale Deed</Badge>}
+            <Badge variant={statusColors[booking.status] || "outline"}>{statusLabel(booking.status)}</Badge>
+          </div>
+        </div>
+        {/* v1.3.2 five independent status chips (§103) — read-only derivation, not editable */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {[
+            { k:"Workflow", v: booking.status_workflow || (booking.status==="completed"?"COMPLETED":"IN_PROGRESS") },
+            { k:"Document", v: booking.status_document || "PENDING" },
+            { k:"Financial", v: booking.status_financial || "PENDING" },
+            { k:"Handover", v: booking.status_handover || "PENDING" },
+            { k:"Overall", v: booking.status_overall || "IN_PROGRESS" },
+          ].map(s=>(
+            <span key={s.k} className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${s.v==="COMPLETED"||s.v==="CLOSED"?"bg-emerald-50 text-emerald-700 border-emerald-200": s.v==="ATTENTION_REQUIRED"?"bg-red-50 text-red-700 border-red-200":"bg-gray-50 text-gray-600 border-gray-200"}`}>{s.k}: {s.v}</span>
+          ))}
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Lifecycle: {booking.lifecycle_status||"ACTIVE"}</span>
         </div>
 
         <div className="mb-6 bg-white dark:bg-gray-900 rounded-lg p-4 ring-1 ring-gray-200 dark:ring-gray-800">
@@ -261,23 +298,30 @@ export default function BookingDetailPage() {
 
         {booking.status !== "completed" && booking.status !== "rejected" && (
           <Card className="mb-6 ring-1 ring-gray-100 dark:ring-gray-800 shadow-sm">
-            <CardHeader className="py-2.5 px-4"><CardTitle className="text-xs font-medium text-gray-500 uppercase tracking-wider">Approval Action</CardTitle></CardHeader>
+            <CardHeader className="py-2.5 px-4"><CardTitle className="text-xs font-medium text-gray-500 uppercase tracking-wider">Approval Action — Send Back requires remark (§68)</CardTitle></CardHeader>
             <CardContent className="px-4 pb-4">
-              <textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Add a comment (optional)..."
+              <textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Remark — mandatory for Send Back, optional for Approve..."
                 className="mb-3 flex min-h-[60px] w-full rounded-md border border-gray-200 dark:border-gray-700 bg-transparent px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
               {error && <p className="text-sm text-red-500 mb-2">{error}</p>}
-              {!approval.allowed && approval.reason && (
-                <p className="text-sm text-gray-500 mb-2 italic">{approval.reason}</p>
-              )}
+              {!approval.allowed && approval.reason && <p className="text-sm text-gray-500 mb-2 italic">{approval.reason}</p>}
               {approval.allowed && (
-                <div className="flex gap-2">
-                  <Button onClick={() => { setPendingAction("approve"); setConfirmOpen(true) }} className="bg-blue-600 hover:bg-blue-700">Approve</Button>
+                <div className="flex gap-2 flex-wrap">
+                  <Button onClick={() => { setPendingAction("approve"); setConfirmOpen(true) }} className="bg-blue-600 hover:bg-blue-700">Approve &amp; move forward</Button>
+                  <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50" onClick={async()=>{ if(!comment.trim()){setError("Send Back requires a remark");return;} setError(""); setPendingAction("SEND_BACK"); setConfirmOpen(true)}}>Send Back</Button>
                   <Button variant="destructive" onClick={() => { setPendingAction("reject"); setConfirmOpen(true) }}>Reject</Button>
                 </div>
               )}
             </CardContent>
           </Card>
         )}
+        {/* v1.3.2 physical custody per document (§1.7) — standalone, never auto-inferred */}
+        <Card className="mb-6 ring-1 ring-gray-100 dark:ring-gray-800 shadow-sm">
+          <CardHeader className="py-2.5 px-4"><CardTitle className="text-xs font-medium text-gray-500 uppercase tracking-wider">Physical Custody — per document (§1.7, v1.3.2 identity from print)</CardTitle></CardHeader>
+          <CardContent className="px-4 pb-4">
+            <p className="text-xs text-gray-500 mb-2">ATS_PRINT / SALE_DEED_PRINT gets identity at Legal Exec print (§1.4) — transfer picks the specific document.</p>
+            <CustodyPanel bookingId={id} />
+          </CardContent>
+        </Card>
 
         {confirmOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">

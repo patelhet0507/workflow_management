@@ -28,9 +28,8 @@ const GlobalSearch = () => {
     { project: "Trident Experia", unit: "B-901", customer: "Ojesh Agrawal", crm: "Kevin Patel", currentStage: "CFO Receipt Check", registrationNo: "—" },
   ]);
 
-  const handleSearch = () => {
-    // In real implementation, call api.searchTransactions(searchParams)
-    console.log("Searching with:", searchParams);
+  const handleSearch = async () => {
+    try{ const r = await api.searchBookings(searchParams as any); setResults(r.map(b=>({ project: b.project_name||"-", unit: b.unit_no, customer: b.client_name, crm: b.sales_exec_name||"-", currentStage: b.status, registrationNo: b.application_no_sale_deed||b.application_no_ats||"—", id: b.id } as any))) }catch(e){ console.error(e)}
   };
 
   const handleClear = () => {
@@ -195,16 +194,16 @@ const GlobalSearch = () => {
                   </tr>
                 </thead>
                 <tbody className="border-t border-[#E4DCC6]">
-                  {results.map((result, index) => (
-                    <tr key={index} className="border-t border-[#F0EAD9] cursor-pointer hover:bg-[#FBF8F0]">
-                      <td className="p-2">{result.project}</td>
-                      <td className="p-2">{result.unit}</td>
-                      <td className="p-2">{result.customer}</td>
-                      <td className="p-2">{result.crm}</td>
-                      <td className="p-2">{result.currentStage}</td>
-                      <td className="p-2">{result.registrationNo}</td>
-                    </tr>
-                  ))}
+                  {results.map((result:any, index) => (
+                      <tr key={index} className="border-t border-[#F0EAD9] cursor-pointer hover:bg-[#FBF8F0]" onClick={()=> result.id && router.push(`/bookings/${result.id}`)}>
+                        <td className="p-2">{result.project}</td>
+                        <td className="p-2">{result.unit}</td>
+                        <td className="p-2">{result.customer}</td>
+                        <td className="p-2">{result.crm}</td>
+                        <td className="p-2">{result.currentStage}</td>
+                        <td className="p-2">{result.registrationNo}</td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
 

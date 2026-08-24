@@ -3,7 +3,7 @@
 import { ReactNode } from "react"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth"
-import { Building2, LayoutDashboard, ClipboardList, LogOut, Menu, X, Plus, Shield } from "lucide-react"
+import { Building2, LayoutDashboard, ClipboardList, LogOut, Menu, X, Plus, Shield, Search, Wallet, FileEdit, Users, History, BarChart3 } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 
@@ -14,10 +14,15 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/bookings", label: "Bookings", icon: ClipboardList },
-    ...(user?.role === "sales" || user?.role === "admin" || user?.role === "super_admin" ? [{ href: "/bookings/new", label: "New Booking", icon: Plus }] : []),
-    { href: "/workflow-page", label: "Workflow Spec (v1.3.2)", icon: Shield },
-    { href: "/workflow-action", label: "Sale Deed Action (03)", icon: Shield },
+    { href: "/financial-dashboard", label: "Financial", icon: Wallet },
+    { href: "/bookings", label: "Bookings (Control Sheet)", icon: ClipboardList },
+    ...(user?.role === "sales" || user?.role === "crm" || user?.role === "admin" || user?.role === "super_admin" ? [{ href: "/bookings/new", label: "New Allocation", icon: Plus }] : []),
+    { href: "/workflow-action", label: "Sale Deed Action", icon: Shield },
+    { href: "/change-requests", label: "Change Requests", icon: FileEdit },
+    { href: "/my-tasks", label: "My Tasks", icon: Users },
+    { href: "/global-search", label: "Global Search (§88)", icon: Search },
+    { href: "/audit-trail", label: "Audit Trail", icon: History },
+    { href: "/workflow-page", label: "Spec v1.3.2", icon: BarChart3 },
     ...(user?.role === "admin" || user?.role === "super_admin" ? [{ href: "/admin", label: "Admin", icon: Shield }] : []),
   ]
 

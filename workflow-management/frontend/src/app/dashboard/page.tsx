@@ -1,7 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/lib/auth";
+import { api, deriveUnitStatus } from "@/lib/api";
 import AppLayout from "@/components/app-layout";
+import Link from "next/link";
 import {
   Shield, ChevronRight, BarChart3, AlertTriangle,
   CheckCircle2, Clock, LockOpen, ScrollText, ArrowUp, Users, FileCheck
@@ -45,8 +48,19 @@ const UNITS = [
 ];
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [sortCol, setSortCol] = useState("days");
-  const sorted = [...UNITS].sort((a, b) => (sortCol === "days" ? b.days - a.days : a.overall.localeCompare(b.overall)));
+  const [live, setLive] = useState<any[] | null>(null);
+  useEffect(()=>{ if(user) api.getBookings(user.id, user.role).then(b=>{
+    if(b.length===0) return;
+    // group by unit_key for derived unit status (§1.3a)
+    const byUnit: Record<string,any[]> = {}
+    b.forEach(x=>{ const k=(x as any).unit_key||x.unit_no; (byUnit[k]=byUnit[k]||[]).push(x)})
+    const rows = b.map(x=>({ project: x.project_name||"-", unit: x.unit_no, customer: x.client_name, crm: x.sales_exec_name||"-", workflow: x.is_direct_sale_deed?"Direct Sale Deed": x.status, stage: x.status, holder: (x as any).current_holder||"-", days: x.created_at? Math.floor((Date.now()-x.created_at.toMillis())/86400000):0, pending: (x as any).financial_exceptions?.filter((e:any)=>e.status==="OPEN").length||0, overall: x.status_overall==="ATTENTION_REQUIRED"?"attention":"in-progress", id: x.id }))
+    setLive(rows)
+  }).catch(()=>{})},[user])
+  const source = live ?? UNITS
+  const sorted = [...source].sort((a, b) => (sortCol === "days" ? (b.days - a.days) : a.overall.localeCompare(b.overall)));
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#F8F4E8] via-[#EDE6CE] to-[#F0E8D4] text-[#141623] relative">
@@ -124,8 +138,8 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sorted.map((row, i) => (
-                    <tr key={i} className="border-t border-[#EDE6CE]/40 hover:bg-[#C5A05A]/5 transition cursor-pointer">
+                  {sorted.map((row:any, i) => (
+                    <tr key={i} className="border-t border-[#EDE6CE]/40 hover:bg-[#C5A05A]/5 transition cursor-pointer" onClick={()=> row.id && (window.location.href=`/bookings/${row.id}`)}>
                       <td className="p-2 text-xs">{row.project}</td>
                       <td className="p-2 font-medium">{row.unit}</td>
                       <td className="p-2 text-xs">{row.customer}</td>
