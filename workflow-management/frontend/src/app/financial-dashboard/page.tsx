@@ -12,16 +12,22 @@ const FinancialDashboard = () => {
   const router = useRouter();
   const [stats, setStats] = useState({ total_bookings: 14, completed: 8, pending_approvals: 6, rejected: 0 });
   const [agg, setAgg] = useState<Record<string,{amount:number,count:number}>>({})
+  const [exceptionTx, setExceptionTx] = useState<number | null>(null)
   useEffect(() => {
     if (!isLoading && !user) return void router.push("/login");
     if (user) {
       api.getDashboardStats(user.id, user.role).then(setStats).catch(console.error);
       api.getBookings(user.id, user.role).then(list=>{
         const m: Record<string,{amount:number,count:number}> = { basicAmount:{amount:0,count:0}, gst:{amount:0,count:0}, runningMaintenance:{amount:0,count:0}, maintenanceDeposit:{amount:0,count:0}, stampDuty:{amount:0,count:0}, legalFees:{amount:0,count:0}, png:{amount:0,count:0}, tds:{amount:0,count:0} }
+        let txWithEx = 0;
         list.forEach(b=>{
           const ex = (b as any).financial_exceptions || []
+          const hasEx = ex.length>0 && ex.some((e:any)=>e.status==="OPEN")
+          const isCfoStage = b.status==="accounts_verification_pending"
+          if(hasEx || (b as any).status_financial==="ATTENTION_REQUIRED" || isCfoStage) txWithEx += 1;
           if(ex.length>0) ex.filter((e:any)=>e.status==="OPEN").forEach((e:any)=>{ const k=e.component?.toLowerCase?.()||e.component; const key = k==="BASIC"?"basicAmount":k==="MAINTENANCE_DEPOSIT"?"maintenanceDeposit":k==="STAMP_DUTY"?"stampDuty":k==="LEGAL_FEES"?"legalFees":k.toLowerCase(); if(m[key]){ m[key].amount+=(e.amount||0); m[key].count+=1}})
         })
+        setExceptionTx(txWithEx || null)
         const hasAny = Object.values(m).some(v=>v.count>0)
         if(!hasAny){ setAgg({ runningMaintenance:{amount:120000,count:2}, maintenanceDeposit:{amount:350000,count:5}, legalFees:{amount:40000,count:1}, png:{amount:30000,count:1}, tds:{amount:1300000,count:4}, basicAmount:{amount:0,count:0}, gst:{amount:0,count:0}, stampDuty:{amount:0,count:0} })
         } else setAgg(m)
@@ -43,11 +49,11 @@ const FinancialDashboard = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
                 { label: "Sale Deeds Completed", value: stats.completed, icon: ChartBar },
-                { label: "With Financial Exceptions", value: 6, icon: Clock },
+                { label: "With Financial Exceptions", value: exceptionTx ?? 6, icon: Clock },
                 { label: "Total Pending", value: `₹${Object.values(agg).reduce((s,v)=>s+v.amount,0).toLocaleString("en-IN") || "18,40,000"}`, icon: Wallet },
               ].map(c=>(
                 <div key={c.label} className="glass-card p-5">
-                  <div className="flex items-center gap-2 mb-2"><c.icon size={14} className="text-[#8A6F3B]" /><p className="text-xs font-bold text-[#8A7E6E] uppercase tracking-wider">{c.label}</p></div>
+                  <div className="flex items-center gap-2 mb-2"><c.icon size={14} className="text-[#8A6F3B]" /><p className="text-xs font-bold text-[#8A7E6E] uppercase tracking-wider">{c.label}</p>{c.label.includes("Exceptions") && exceptionTx!==null && <span className="text-[11px] bg-[#C5A05A]/10 border border-[#C5A05A]/20 px-1.5 py-0.5 rounded-full text-[#8A6F3B]">live</span>}</div>
                   <div className="font-editorial text-3xl text-[#141623]">{c.value}</div>
                 </div>
               ))}

@@ -44,7 +44,7 @@ export default function ChangesPage() {
     try{
       if (r._type==="Cancellation") await api.approveCancellation(r.id, user!.id);
       else if (r._type==="Customer Change") await api.approveCustomerChange(r.id, user!.id);
-      else setMsg("Unit Change approval creates new transaction — use detail page");
+      else if (r._type==="Unit Change") { const nid = await api.approveUnitChange(r.id, user!.id, user!.name); setMsg(`Unit Change approved — new transaction ${nid.slice(0,6)} created (§1.9 atomic)`); }
       load();
     } catch(e:any){ setMsg(e.message)}
   };

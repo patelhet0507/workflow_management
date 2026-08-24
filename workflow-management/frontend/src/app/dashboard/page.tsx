@@ -1,13 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
-import { api, deriveUnitStatus } from "@/lib/api";
+import { api } from "@/lib/api";
 import AppLayout from "@/components/app-layout";
-import Link from "next/link";
 import {
-  Shield, ChevronRight, BarChart3, AlertTriangle,
-  CheckCircle2, Clock, LockOpen, ScrollText, ArrowUp, Users, FileCheck
+  BarChart3
 } from "lucide-react";
 
 const SUMMARY = [
@@ -95,15 +92,22 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Unit Summary */}
+            {/* Unit Summary — live when bookings exist */}
             <div className="glass-card p-6">
-              <h3 className="font-editorial text-lg text-[#141623] mb-3">Unit Summary</h3>
+              <div className="flex items-center justify-between mb-3"><h3 className="font-editorial text-lg text-[#141623]">Unit Summary (§78)</h3>{summaryLive && <span className="text-[11px] text-[#8A7E6E] bg-[#C5A05A]/10 px-2 py-0.5 rounded-full border border-[#C5A05A]/20">live</span>}</div>
               <div className="flex flex-wrap gap-2">
-                {SUMMARY.map((s) => (
+                {(summaryLive ? [
+                  { label: "Total Units", value: summaryLive.total },
+                  { label: "Allocation Pending", value: summaryLive.pending, color: "amber" },
+                  { label: "Direct Sale Deed", value: summaryLive.direct, color: "blue" },
+                  { label: "Completed", value: summaryLive.completed, color: "green" },
+                  { label: "Cancelled", value: summaryLive.cancelled, color: "red" },
+                ] : SUMMARY).map((s:any) => (
                   <span key={s.label} className={`text-xs font-medium px-3 py-1.5 rounded-full border transition ${s.color === "green" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : s.color === "red" ? "bg-red-50 border-red-200 text-red-700" : s.color === "amber" ? "bg-amber-50 border-amber-200 text-amber-700" : s.color === "blue" ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-[#F8F4E8] border-[#C5A05A]/20 text-[#141623]"}`}>
                     {s.label}: <span className="font-bold">{s.value}</span>
                   </span>
                 ))}
+                {!summaryLive && <span className="text-[11px] text-[#8A7E6E] ml-2">(demo — no bookings yet)</span>}
               </div>
             </div>
 

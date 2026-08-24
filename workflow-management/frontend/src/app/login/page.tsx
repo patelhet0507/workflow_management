@@ -56,10 +56,9 @@ export default function LoginPage() {
           <Link href="/register" className="text-[#8A6F3B] hover:text-[#141623] font-medium">Create an account</Link>
         </p>
         <div className="mt-6 text-xs text-[#8A7E6E] space-y-1 border-t border-[#EDE6CE]/60 pt-4">
-          <p className="font-semibold text-[#141623]">Roles (§1.1)</p>
-          <p>CRM — Create allocations</p>
-          <p>Super Admin — Full access</p>
-          <p>Legal / CFO / Admin — approve at their stage (§1.6b)</p>
+          <p className="font-semibold text-[#141623]">Roles (§1.1) — 9 canonical</p>
+          <p>CRM — Create allocations · CSO · Management · Legal Exec / Manager · CFO (accounts) · CRM Exec · Admin Exec</p>
+          <p>Super Admin — Full access · Delegation within time-window (§62)</p>
         </div>
       </div>
     </div>

@@ -31,13 +31,23 @@ export default function AdminPage() {
   const [newFieldType, setNewFieldType] = useState<BookingFieldDef["type"]>("text")
 
   const isAdmin = user?.role === "admin" || user?.role === "super_admin"
+  const [delegations, setDelegations] = useState<any[]>([])
+  const [dNominal, setDNominal] = useState("legal")
+  const [dDelegated, setDDelegated] = useState("crm")
+  const [dOriginal, setDOriginal] = useState("")
+  const [dActing, setDActing] = useState("")
+  const [dStart, setDStart] = useState(new Date().toISOString().slice(0,10))
+  const [dEnd, setDEnd] = useState(new Date().toISOString().slice(0,10))
+  const [dReason, setDReason] = useState("")
+  const [dMsg, setDMsg] = useState("")
 
   useEffect(() => {
     if (!isLoading && (!user || !isAdmin)) router.push("/dashboard")
     if (isAdmin) {
-      api.getUsers().then(setUsers).catch(console.error)
+      api.getUsers().then(u=>{ setUsers(u); if(u[0]) { setDOriginal(u[0].id); setDActing(u[1]?.id||u[0].id) }}).catch(console.error)
       api.getApprovalFlow().then(setFlow).catch(console.error)
       api.getBookingForm().then(setFormFields).catch(console.error)
+      api.getDelegations().then(setDelegations).catch(()=>{})
     }
   }, [user, isLoading, router])
 
@@ -261,6 +271,29 @@ export default function AdminPage() {
                   </tbody>
                 </table>
               </div>
+            </div>
+
+            <div className="glass-card p-6">
+              <div className="flex items-center gap-2 mb-2"><span className="w-1 h-5 bg-gradient-to-b from-[#C5A05A] to-[#8A6F3B] rounded-full" /><h2 className="font-editorial text-xl text-[#141623]">Delegations — time-window (§62-65)</h2></div>
+              <p className="text-xs text-[#8A7E6E] mb-4">Super Admin creates: nominal_role → delegated_role, active only within [start_date, end_date]. Evaluated server-side in approveBooking.</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                <select value={dOriginal} onChange={e=>setDOriginal(e.target.value)} className="h-9 rounded-xl border border-[#C5A05A]/20 bg-white/60 px-2 text-xs">{users.map(u=> <option key={u.id} value={u.id}>{u.name}</option>)}</select>
+                <select value={dActing} onChange={e=>setDActing(e.target.value)} className="h-9 rounded-xl border border-[#C5A05A]/20 bg-white/60 px-2 text-xs">{users.map(u=> <option key={u.id} value={u.id}>{u.name}</option>)}</select>
+                <select value={dNominal} onChange={e=>setDNominal(e.target.value)} className="h-9 rounded-xl border border-[#C5A05A]/20 bg-white/60 px-2 text-xs">{ROLES.map(r=> <option key={r.value} value={r.value}>{r.label}</option>)}</select>
+                <select value={dDelegated} onChange={e=>setDDelegated(e.target.value)} className="h-9 rounded-xl border border-[#C5A05A]/20 bg-white/60 px-2 text-xs">{ROLES.map(r=> <option key={r.value} value={r.value}>{r.label}</option>)}</select>
+                <input type="date" value={dStart} onChange={e=>setDStart(e.target.value)} className="h-9 rounded-xl border border-[#C5A05A]/20 bg-white/60 px-2 text-xs" />
+                <input type="date" value={dEnd} onChange={e=>setDEnd(e.target.value)} className="h-9 rounded-xl border border-[#C5A05A]/20 bg-white/60 px-2 text-xs" />
+              </div>
+              <input value={dReason} onChange={e=>setDReason(e.target.value)} placeholder="Reason" className="w-full h-9 rounded-xl border border-[#C5A05A]/20 bg-white/60 px-3 text-sm mb-3" />
+              <div className="flex gap-2 items-center">
+                <button onClick={async()=>{ try{ await api.createDelegation({ nominal_role:dNominal, delegated_role:dDelegated, original_user_id:dOriginal, acting_user_id:dActing, start_date:dStart, end_date:dEnd, reason:dReason }, user!.id); setDMsg("Delegation created"); api.getDelegations().then(setDelegations).catch(()=>{}) }catch(e:any){ setDMsg(e.message)}} } className="btn-luxury text-xs">Create Delegation</button>
+                {dMsg && <span className="text-xs text-[#8A6F3B]">{dMsg}</span>}
+              </div>
+              {delegations.length>0 && (
+                <div className="mt-4 overflow-x-auto rounded-xl border border-[#EDE6CE]/60">
+                  <table className="w-full text-xs"><thead className="bg-gradient-to-r from-[#141623]/5 to-transparent"><tr><th className="p-2 text-left text-[#8A7E6E] uppercase tracking-wider">Nominal → Delegated</th><th className="p-2 text-left text-[#8A7E6E]">Period</th><th className="p-2">Active</th></tr></thead><tbody className="divide-y divide-[#EDE6CE]/40">{delegations.map((d:any)=> <tr key={d.id}><td className="p-2">{d.nominal_role} → {d.delegated_role}</td><td className="p-2">{d.start_date} → {d.end_date}</td><td className="p-2">{d.active?"Yes":"No"}</td></tr>)}</tbody></table>
+                </div>
+              )}
             </div>
           </div>
         </AppLayout>

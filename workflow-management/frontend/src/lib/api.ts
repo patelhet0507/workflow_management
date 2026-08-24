@@ -1,5 +1,5 @@
 import { auth, db } from "./firebase"
-import { doc, getDoc, getDocs, addDoc, updateDoc, setDoc, query, collection, where, orderBy, Timestamp } from "firebase/firestore"
+import { doc, getDoc, getDocs, addDoc, updateDoc, setDoc, query, collection, where, orderBy, Timestamp, writeBatch } from "firebase/firestore"
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth"
 
 export interface UserData {
@@ -127,12 +127,13 @@ const SUPER_ADMIN_EMAIL = "patelhet.0507@gmail.com"
 // v1.3.2 helpers — ponytail: keep as pure functions, no extra deps
 export function unitKey(s: string): string { return (s||"").toUpperCase().replace(/[^A-Z0-9]/g,"") }
 // single recompute — mirrors constants.recomputeUnitStatus for Firestore bookings (§1.3b)
-export function deriveUnitStatus(bookingsForUnit: BookingData[]): string {
+// ponder: financial_exceptions live in subcollection, not on doc — caller passes hasOpen flag
+export function deriveUnitStatus(bookingsForUnit: BookingData[], hasOpenFinancialExceptions?: boolean): string {
   const active = bookingsForUnit.find(b=> (b.lifecycle_status||"ACTIVE")==="ACTIVE")
   if (active) {
-    const hasOpen = (active as any).financial_exceptions?.some((e:any)=>e.status==="OPEN")
+    const hasOpen = hasOpenFinancialExceptions ?? (active as any).financial_exceptions?.some((e:any)=>e.status==="OPEN") ?? (active.status_financial==="ATTENTION_REQUIRED")
     if (active.status==="completed" || active.status==="archived") return hasOpen ? "FINANCIAL_EXCEPTION" : "COMPLETED"
-    if ((active as any).sale_deed_registered) return "SALE_DEED_REGISTERED"
+    if ((active as any).sale_deed_registered || (active as any).registration_completed) return "SALE_DEED_REGISTERED"
     if ((active as any).sale_deed_in_progress) return "SALE_DEED_IN_PROCESS"
     if ((active as any).ats_registered) return "ATS_REGISTERED"
     if ((active as any).ats_in_progress) return "ATS_IN_PROCESS"
@@ -197,7 +198,7 @@ export const api = {
     const cred = await signInWithEmailAndPassword(auth, email, password)
     let user = await getUser(cred.user.uid)
     if (!user) {
-      user = { id: cred.user.uid, name: cred.user.displayName || email.split("@")[0], email, role: "sales" }
+      user = { id: cred.user.uid, name: cred.user.displayName || email.split("@")[0], email, role: "crm" }
       await setDoc(doc(db, USERS, cred.user.uid), user)
     }
     const token = await cred.user.getIdToken()
@@ -277,36 +278,49 @@ export const api = {
     if (action === "SEND_BACK" || action === "send_back") {
       if (!comment?.trim()) throw new Error("Send Back requires a remark (§68)")
     }
-    // permission check with acting roles (§66) + delegation alias
+    // permission check with acting roles (§66) + delegation time-window (§62-65)
     if (action === "approve" || action === "SEND_BACK") {
       const stage = flow.find((s) => s.status === currentStatus)
       if (stage) {
         const alias: Record<string,string[]> = { legal:["crm","accounts"], crm:["crm"], crm_executive:["crm"], legal_execution:["legal_execution"] }
         const acting = (alias[stage.role] || [stage.role])
-        const isAllowed = userRole === stage.role || acting.includes(userRole) || userRole === "super_admin"
+        let isAllowed = userRole === stage.role || acting.includes(userRole) || userRole === "super_admin"
+        // delegation evaluation — active + within [start_date, end_date] (§62)
+        if (!isAllowed) {
+          const today = new Date().toISOString().slice(0,10)
+          const dSnap = await getDocs(query(collection(db, "delegations"), where("nominal_role","==",stage.role), where("delegated_role","==",userRole), where("active","==",true)))
+          const hasValid = dSnap.docs.some(d=>{
+            const v:any = d.data(); const s = v.start_date, e = v.end_date
+            return s <= today && today <= e
+          })
+          if (hasValid) isAllowed = true
+        }
         if (!isAllowed) throw new Error(`Only ${stage.role} can approve at this stage (you are ${userRole})`)
       }
     }
     // build logical flow: skip ATS stages when Direct Sale Deed (§26)
-    const ATS_STATUSES = ["ats_approved","sale_deed_approved","print_requested"]
     let logicalFlow = flow
-    if (bData.is_direct_sale_deed) logicalFlow = flow.filter(s=> !ATS_STATUSES.includes(s.status) || s.status==="sale_deed_approved")
-    // actually for direct: keep sale_deed_approved but drop ats_approved + print_requested for ATS path
-    // simpler: filter ats_approved only when direct
     if (bData.is_direct_sale_deed) logicalFlow = flow.filter(s=> s.status !== "ats_approved")
     const statuses = ["booking_completed", ...logicalFlow.map((s) => s.status), "completed"]
     const idx = statuses.indexOf(currentStatus)
     let newStatus: string
+    let autoExCount = 0
     if (action === "approve") {
-      // CFO receipt check may approve with pending (§48) — create exceptions instead of blocking
-      if (currentStatus === "accounts_verification_pending" || currentStatus === "cfo_receipt_check") {
-        // exceptions are created separately via UI; allow advance regardless
-      }
       newStatus = idx >=0 && idx < statuses.length - 1 ? statuses[idx + 1] : currentStatus
-      // if direct and next is ats_approved skip it
       if (bData.is_direct_sale_deed && newStatus === "ats_approved") newStatus = statuses[idx+2] || newStatus
+      // financial-exception auto-create §48: CFO can approve with pending receipts → create OPEN exceptions, never block
+      const isCfoStage = currentStatus === "accounts_verification_pending" || currentStatus === "cfo_receipt_check"
+      if (isCfoStage) {
+        const FIN_MAP: Record<string,string> = { basic_amount:"BASIC", gst:"GST", running_maintenance:"RUNNING_MAINTENANCE", maintenance_deposit:"MAINTENANCE_DEPOSIT", stamp_duty:"STAMP_DUTY", legal_charges:"LEGAL_FEES", png_charges:"PNG", tds:"TDS" }
+        for (const [field, comp] of Object.entries(FIN_MAP)) {
+          const amt = (bData as any)[field]
+          if (amt === undefined || amt === null || amt === 0 || amt === "") {
+            const exSnap = await getDocs(query(collection(db, BOOKINGS, bookingId, "financial_exceptions"), where("component","==",comp), where("status","==","OPEN")))
+            if (exSnap.empty) { await addDoc(collection(db, BOOKINGS, bookingId, "financial_exceptions"), { component: comp, amount: Number(amt)||0, status:"OPEN", created_at: Timestamp.now(), created_by: userId }); autoExCount++ }
+          }
+        }
+      }
     } else if (action === "SEND_BACK" || action === "send_back") {
-      // send back to previous stage, not a synthetic status (§68)
       newStatus = idx > 0 ? statuses[idx - 1] : statuses[0]
     } else newStatus = "rejected"
     const signUpdates: Partial<BookingData> = action === "approve" && SIGN_FIELDS[currentStatus]
@@ -314,8 +328,8 @@ export const api = {
     const printStages = ["documents_printed","print_requested"]
     const extra: any = {}
     if (action==="approve" && printStages.includes(currentStatus)) extra.documents_created = true
-    // status_overall derivation: ATTENTION_REQUIRED if financial pending (§103)
-    const nextOverall = newStatus === "completed" ? "CLOSED" : "IN_PROGRESS"
+    if (autoExCount > 0) extra.status_financial = "ATTENTION_REQUIRED"
+    const nextOverall = newStatus === "completed" ? "CLOSED" : (autoExCount>0 ? "ATTENTION_REQUIRED" : "IN_PROGRESS")
     await updateDoc(doc(db, BOOKINGS, bookingId), { status: newStatus, status_overall: nextOverall, updated_at: Timestamp.now(), ...signUpdates, ...extra })
     await addDoc(collection(db, BOOKINGS, bookingId, "approvals"), {
       action: action==="SEND_BACK"?"SEND_BACK":action, user_id: userId, user_name: userName, stage: currentStatus, comment: comment || "",
@@ -382,8 +396,60 @@ export const api = {
     const snap = await getDoc(doc(db, "customer_changes", changeId))
     if (!snap.exists()) throw new Error("Request not found")
     const r:any = snap.data()
+    if (r.status !== "PENDING") throw new Error("Request already processed")
     await updateDoc(doc(db, "customer_changes", changeId), { status:"APPROVED", approved_by: userId, approved_at: Timestamp.now(), approved_customer_name: r.proposed_customer_name })
     await updateDoc(doc(db, BOOKINGS, r.transaction_id), { client_name: r.proposed_customer_name, updated_at: Timestamp.now() })
+  },
+  // §1.9 Unit Change — atomic new-transaction creation (6-step validation + writeBatch)
+  async approveUnitChange(changeId: string, approverId: string, approverName: string) {
+    const snap = await getDoc(doc(db, "unit_changes", changeId))
+    if (!snap.exists()) throw new Error("Request not found")
+    const req:any = snap.data()
+    if (req.status !== "PENDING") throw new Error("Request already processed")
+    const oldSnap = await getDoc(doc(db, BOOKINGS, req.old_transaction_id))
+    if (!oldSnap.exists()) throw new Error("Old transaction not found")
+    const old:any = { id: oldSnap.id, ...oldSnap.data() }
+    if ((old.lifecycle_status||"ACTIVE") !== "ACTIVE") throw new Error("Old transaction is no longer ACTIVE (cancelled in the meantime)")
+    const newKey = req.new_unit_key || unitKey(req.new_unit_no)
+    const newUnitQ = await getDocs(query(collection(db, BOOKINGS), where("unit_key","==",newKey), where("is_deleted","==",false)))
+    if (newUnitQ.docs.some(d=> (d.data().lifecycle_status||"ACTIVE")==="ACTIVE")) throw new Error("Selected unit is no longer available (§1.9 step 7)")
+    // atomic batch: old → SUPERSEDED, new transaction, request update
+    const batch = writeBatch(db)
+    const newRef = doc(collection(db, BOOKINGS))
+    batch.update(doc(db, BOOKINGS, old.id), { lifecycle_status:"SUPERSEDED", status_overall:"CLOSED", status_workflow:"SUPERSEDED", updated_at: Timestamp.now() })
+    batch.set(newRef, {
+      unit_no: req.new_unit_no, unit_key: newKey,
+      project_name: old.project_name, client_name: old.client_name,
+      sd_value: old.sd_value, payment_plan: old.payment_plan, source_of_booking: old.source_of_booking, booked_by: old.booked_by,
+      basic_amount: old.basic_amount, gst: old.gst, running_maintenance: old.running_maintenance, maintenance_deposit: old.maintenance_deposit, stamp_duty: old.stamp_duty, legal_charges: old.legal_charges, png_charges: old.png_charges, tds: old.tds,
+      sales_exec_id: old.sales_exec_id, sales_exec_name: old.sales_exec_name,
+      status: "booking_completed", lifecycle_status:"ACTIVE", is_deleted:false,
+      source_transaction_id: old.id, source_change_type:"UNIT_CHANGE",
+      previous_cancelled_transaction_id: null,
+      status_workflow:"IN_PROGRESS", status_document:"PENDING", status_financial:"PENDING", status_handover:"PENDING", status_overall:"IN_PROGRESS",
+      is_direct_sale_deed: old.is_direct_sale_deed || false,
+      created_at: Timestamp.now(), updated_at: Timestamp.now(),
+    })
+    batch.update(doc(db, "unit_changes", changeId), { status:"APPROVED", new_transaction_id: newRef.id, approved_by: approverId, approved_at: Timestamp.now() })
+    await batch.commit()
+    // audit log for approver
+    await addDoc(collection(db, BOOKINGS, newRef.id, "approvals"), { action:"UNIT_CHANGE_CREATE", user_id: approverId, user_name: approverName, stage: "unit_change", comment: req.reason||"", created_at: Timestamp.now() })
+    return newRef.id
+  },
+  // delegations — time-window evaluation §62-65
+  async createDelegation(data: { nominal_role: string; delegated_role: string; original_user_id: string; acting_user_id: string; start_date: string; end_date: string; reason: string }, creatorId: string) {
+    if (data.start_date > data.end_date) throw new Error("Start date must be <= end date")
+    if (data.original_user_id === data.acting_user_id) throw new Error("Cannot delegate to self")
+    return addDoc(collection(db, "delegations"), { ...data, active: true, created_by: creatorId, created_at: Timestamp.now() })
+  },
+  async getDelegations() {
+    const snap = await getDocs(query(collection(db, "delegations"), orderBy("created_at","desc")))
+    return snap.docs.map(d=>({id:d.id,...d.data()}))
+  },
+  async isDelegated(nominalRole: string, actingRole: string, actingUserId?: string): Promise<boolean> {
+    const today = new Date().toISOString().slice(0,10)
+    const snap = await getDocs(query(collection(db, "delegations"), where("nominal_role","==",nominalRole), where("delegated_role","==",actingRole), where("active","==",true)))
+    return snap.docs.some(d=>{ const v:any=d.data(); if(actingUserId && v.acting_user_id!==actingUserId) return false; return v.start_date <= today && today <= v.end_date })
   },
   // global search combinable (§88) — thin filter bar, not a reporting module
   async searchBookings(filters: Record<string,string>) {

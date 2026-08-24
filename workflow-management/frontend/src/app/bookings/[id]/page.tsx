@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { useAuth } from "@/lib/auth"
 import { api, type StageDef, type BookingFieldDef } from "@/lib/api"
-import { FIELD_GROUPS, statusLabel, roleLabel, type FieldGroup } from "@/lib/constants"
+import { FIELD_GROUPS, statusLabel, roleLabel, type FieldGroup, canonicalRole } from "@/lib/constants"
 import AppLayout from "@/components/app-layout"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -73,13 +73,17 @@ export default function BookingDetailPage() {
   const canApprove = (): { allowed: boolean; reason?: string } => {
     if (!user || !booking) return { allowed: false }
     if (booking.status === "completed" || booking.status === "rejected") return { allowed: false, reason: "Booking already finalized" }
+    if (booking.lifecycle_status === "CANCELLED" || booking.lifecycle_status === "SUPERSEDED") return { allowed: false, reason: "Transaction is terminal — no further actions" }
     const stage = flow.find((s) => s.status === booking.status)
     if (!stage) return { allowed: false, reason: "Cannot approve at this stage" }
-    if (user.role === "super_admin") return { allowed: true }
-    if (user.role !== stage.role) return { allowed: false, reason: `Only ${roleLabel(stage.role)} can approve at this stage` }
+    const me = canonicalRole(user.role)
+    if (me === "super_admin") return { allowed: true }
+    const alias: Record<string,string[]> = { legal:["crm","accounts"], crm:["crm"], crm_executive:["crm"] }
+    const acting = alias[stage.role] || [stage.role]
+    if (me !== stage.role && !acting.includes(me)) return { allowed: false, reason: `Only ${roleLabel(stage.role)} can approve at this stage (you are ${roleLabel(me)})` }
     return { allowed: true }
   }
-  const canEditGroup = (group: FieldGroup): boolean => { if (!user) return false; return group.owners.includes(user.role) || group.owners.includes((user.role||"").toLowerCase()) }
+  const canEditGroup = (group: FieldGroup): boolean => { if (!user) return false; const me = canonicalRole(user.role); return group.owners.includes(me) }
   const startEdit = (group: FieldGroup) => { const d: Record<string, string | boolean> = {}; group.fields.forEach((f) => { const v = booking[f.key]; d[f.key] = f.type === "checkbox" ? !!v : (v === undefined || v === null ? "" : String(v)) }); setDraft(d); setEditingGroup(group.key); setSaveError("") }
   const saveGroup = async (group: FieldGroup) => {
     if (!id) return; setSaveError(""); const updates: Record<string, any> = {}; group.fields.forEach((f) => { const v = draft[f.key]; if (f.type === "checkbox") { updates[f.key] = !!v; return } const s = v === undefined ? "" : String(v).trim(); if (s === "") { updates[f.key] = null; return } updates[f.key] = f.type === "number" ? parseFloat(s) : s }); try { await api.updateBooking(id, updates); setEditingGroup(null); load() } catch (err: any) { setSaveError(err.message || "Save failed") }
