@@ -18,8 +18,9 @@ function CustodyPanel({ bookingId }: { bookingId: string }) {
   const [docId, setDocId] = useState("ATS_PRINT")
   const [toRole, setToRole] = useState("legal")
   const [remark, setRemark] = useState("")
-  const load = ()=> api.getCustodyLog(bookingId).then(setLog).catch(()=>{})
-  useEffect(()=>{ load() },[bookingId])
+  const load = ()=> { if (!bookingId) return; api.getCustodyLog(bookingId).then(setLog).catch(()=>{}) }
+  useEffect(()=>{ if (!bookingId) return; load() },[bookingId])
+  if (!bookingId) return null
   return (<>
     <div className="flex gap-2 flex-wrap items-center mb-3">
       <select value={docId} onChange={e=>setDocId(e.target.value)} className="h-8 rounded-xl border border-[#C5A05A]/20 bg-white/60 px-2 text-xs"><option value="ATS_PRINT">ATS Print</option><option value="SALE_DEED_PRINT">Sale Deed Print</option></select>
@@ -48,12 +49,13 @@ export default function BookingDetailPage() {
   const router = useRouter()
   const params = useParams()
   const id = params?.id as string
-  const [booking, setBooking] = useState<any>({})
+  const [booking, setBooking] = useState<any>(null)
   const [history, setHistory] = useState<any[]>([])
   const [flow, setFlow] = useState<StageDef[]>([])
   const [formFields, setFormFields] = useState<BookingFieldDef[]>([])
   const [comment, setComment] = useState("")
   const [error, setError] = useState("")
+  const [loadError, setLoadError] = useState("")
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState("")
   const [password, setPassword] = useState("")
@@ -63,9 +65,10 @@ export default function BookingDetailPage() {
   const [saveError, setSaveError] = useState("")
   const load = () => {
     if (!id || !user) return
-    Promise.all([ api.getBooking(id), api.getBookingHistory(id), api.getApprovalFlow(), api.getBookingForm(), ]).then(([b, h, f, bf]) => { setBooking(b); setHistory(h); setFlow(f); setFormFields(bf) }).catch(console.error)
+    setLoadError("")
+    Promise.all([ api.getBooking(id), api.getBookingHistory(id), api.getApprovalFlow(), api.getBookingForm(), ]).then(([b, h, f, bf]) => { setBooking(b); setHistory(h); setFlow(f); setFormFields(bf) }).catch((e:any)=>{ console.error(e); setLoadError(e.message||"Failed to load booking") })
   }
-  useEffect(() => { if (!isLoading && !user) router.push("/login"); else load() }, [user, isLoading, router, id])
+  useEffect(() => { if (!isLoading && !user) router.push("/login"); else if (id && user) load() }, [user, isLoading, router, id])
   const confirmAndApprove = async (action: string) => {
     setConfirmError("")
     try { await verifyPassword(password); if (!user) return; await api.approveBooking(id, action, comment, user.id, user.name, user.role); setConfirmOpen(false); setPassword(""); setComment(""); load() } catch (err: any) { if (err.code === "auth/wrong-password" || err.message?.includes("wrong-password") || err.message?.includes("invalid-credential")) setConfirmError("Incorrect password"); else setConfirmError(err.message || "Verification failed") }
@@ -88,7 +91,13 @@ export default function BookingDetailPage() {
   const saveGroup = async (group: FieldGroup) => {
     if (!id) return; setSaveError(""); const updates: Record<string, any> = {}; group.fields.forEach((f) => { const v = draft[f.key]; if (f.type === "checkbox") { updates[f.key] = !!v; return } const s = v === undefined ? "" : String(v).trim(); if (s === "") { updates[f.key] = null; return } updates[f.key] = f.type === "number" ? parseFloat(s) : s }); try { await api.updateBooking(id, updates); setEditingGroup(null); load() } catch (err: any) { setSaveError(err.message || "Save failed") }
   }
-  if (isLoading || !user || !booking) return null
+  if (isLoading || !user) return null
+  if (loadError) return (
+    <div className="min-h-screen bg-gradient-to-b from-[#F8F4E8] via-[#EDE6CE] to-[#F0E8D4] flex items-center justify-center p-6"><div className="glass-card p-8 max-w-md text-center"><p className="font-editorial text-xl text-[#141623] mb-2">Failed to load booking</p><p className="text-sm text-[#8A7E6E] mb-4">{loadError}</p><p className="text-xs text-[#8A7E6E]">ID: {id}</p><button onClick={()=>load()} className="btn-luxury mt-4 text-xs">Retry</button></div></div>
+  )
+  if (!booking) return (
+    <div className="min-h-screen bg-gradient-to-b from-[#F8F4E8] via-[#EDE6CE] to-[#F0E8D4] flex items-center justify-center p-6"><div className="glass-card p-8 text-center"><p className="text-sm text-[#8A7E6E]">Loading booking…</p></div></div>
+  )
   const stages = [{ status: "booking_completed", role: "Created" }, ...flow, { status: "completed", role: "Completed" }]
   const currentIdx = stages.findIndex((s) => s.status === booking.status)
   const progress = booking.status === "rejected" ? 0 : booking.status === "completed" ? 100 : Math.max(0, currentIdx) * (100 / (stages.length - 1))
