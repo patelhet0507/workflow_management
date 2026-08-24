@@ -1,0 +1,28 @@
+%% Carried forward unchanged from v1.2 — no correction in the v1.3 change list applied to this diagram.
+
+stateDiagram-v2
+    [*] --> Allocation: CRM ticks "Direct Sale Deed Case"\n(mandatory remark, audit event, §26)
+
+    Allocation --> CSO_Approval: CRM submits\n(CCF + KYC required, same as normal)
+    CSO_Approval --> Mgmt_Allocation_Approval: CSO Approves
+
+    Mgmt_Allocation_Approval --> ATS_Skipped: Management Approves\n(Approval #1 of 3)
+
+    state ATS_Skipped {
+        [*] --> Shown_As_Not_Applicable
+        Shown_As_Not_Applicable --> [*]: Timeline explicitly shows\n"ATS Skipped — Direct Sale Deed Case"\nATS never appears as pending (§26)
+    }
+
+    ATS_Skipped --> SD_Mgmt_Approval: proceeds directly
+
+    SD_Mgmt_Approval --> SaleDeed_Workflow: Management Approves\n(Approval #3 of 3 — still mandatory\neven though ATS was skipped, §43)
+
+    SaleDeed_Workflow --> [*]: full Sale Deed workflow\nas in workflow-saledeed.mermaid
+
+    note right of ATS_Skipped
+        Normal case has 3 distinct Management approvals:
+        Allocation, ATS, Sale Deed.
+        Direct case still has all 3 stages defined,
+        but the ATS one resolves to SKIPPED,
+        not silently omitted, so audit/history stays complete.
+    end note

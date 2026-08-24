@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Phase 2 — UI Wireframes</title>
+<style>
+  :root{
+    --blue-bg:#EDF1F5; --grid:#C6D2DE; --ink:#1C2B3A; --line:#7C93AC;
+    --panel:#FFFFFF; --annot:#B5651D; --annot-bg:#FBF0E4; --chip:#DCE3EA; --chip-ink:#4E6072;
+    --ok:#2E6B4F; --warn:#B5651D; --pending:#A93226;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--blue-bg);color:var(--ink);font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:24px 24px; background-attachment:fixed;}
+  .topbar{position:sticky;top:0;z-index:10;background:var(--ink);color:#EDF1F5;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .topbar .brand{font-family:'Courier New',monospace;letter-spacing:.12em;font-size:11px;text-transform:uppercase;color:#9FB2C4;margin-right:8px;}
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;}
+  .tab{font-family:'Courier New',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;background:transparent;
+    color:#C7D3DE;border:1px solid #3C4E60;padding:6px 10px;border-radius:2px;cursor:pointer;}
+  .tab.active{background:#EDF1F5;color:var(--ink);border-color:#EDF1F5;}
+  .sheet{max-width:1180px;margin:20px auto;padding:0 16px 60px;}
+  .drawing{background:var(--panel);border:1px solid var(--line);position:relative;padding:22px;}
+  .drawing::before,.drawing::after,.reg-tl,.reg-br{content:"";position:absolute;width:14px;height:14px;border:1px solid var(--line);}
+  .reg-tl{top:8px;left:8px;border-right:none;border-bottom:none;}
+  .reg-br{bottom:8px;right:8px;border-left:none;border-top:none;}
+  h1.sheet-title{font-family:'Courier New',monospace;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--line);margin:0 0 4px;}
+  h2.screen-name{font-size:22px;margin:0 0 18px;font-weight:700;}
+  .region{border:1.5px dashed var(--line);border-radius:4px;padding:12px;margin-bottom:12px;position:relative;background:#FAFCFD;}
+  .tag{position:absolute;top:-11px;left:10px;background:var(--annot);color:#fff;font-family:'Courier New',monospace;
+    font-size:11px;font-weight:700;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+  .region-label{font-family:'Courier New',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--chip-ink);margin-bottom:6px;}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .chip{background:var(--chip);color:var(--chip-ink);font-size:11px;padding:3px 8px;border-radius:3px;white-space:nowrap;}
+  .stamp{border:2px solid;border-radius:3px;padding:2px 7px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;transform:rotate(-2deg);display:inline-block;}
+  .stamp.ok{color:var(--ok);border-color:var(--ok);}
+  .stamp.warn{color:var(--warn);border-color:var(--warn);}
+  .stamp.pending{color:var(--pending);border-color:var(--pending);}
+  .stamp.idle{color:#8C8272;border-color:#8C8272;}
+  table{width:100%;border-collapse:collapse;font-size:11.5px;}
+  th{background:#F1F5F8;text-align:left;padding:5px 6px;font-weight:600;border-bottom:1px solid var(--grid);white-space:nowrap;}
+  td{padding:5px 6px;border-bottom:1px solid #EEF2F5;white-space:nowrap;}
+  .placeholder-input{background:#F5F8FA;border:1px solid var(--grid);border-radius:2px;padding:5px 8px;font-size:11.5px;color:#8FA0AF;display:inline-block;}
+  .field-label{font-size:10.5px;color:#7C93AC;display:block;margin-bottom:2px;}
+  .legend{margin-top:16px;padding-top:12px;border-top:1px dashed var(--grid);}
+  .legend h3{font-family:'Courier New',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--annot);margin:0 0 8px;}
+  .legend ol{margin:0;padding-left:18px;font-size:12px;line-height:1.7;}
+  .legend li::marker{font-family:'Courier New',monospace;color:var(--annot);font-weight:700;}
+  .titleblock{margin-top:22px;border-top:2px solid var(--ink);padding-top:8px;display:flex;justify-content:space-between;
+    font-family:'Courier New',monospace;font-size:10px;letter-spacing:.05em;color:var(--line);flex-wrap:wrap;gap:6px;}
+  .titleblock b{color:var(--ink);}
+  .flow{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:8px 0;}
+  .flowstep{min-width:150px;border:1.5px solid var(--line);border-radius:4px;padding:10px;margin-right:22px;position:relative;background:#fff;font-size:11.5px;}
+  .flowstep::after{content:"→";position:absolute;right:-20px;top:50%;transform:translateY(-50%);color:var(--line);font-size:16px;}
+  .flowstep:last-child::after{display:none;}
+  .flowstep.skip{border-style:dashed;border-color:var(--warn);color:var(--warn);background:var(--annot-bg);}
+  .stepperwrap{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;}
+  .step{min-width:118px;border:1px solid var(--grid);border-radius:3px;padding:6px 8px;font-size:10.5px;background:#fff;}
+  .step.current{border-color:var(--annot);background:var(--annot-bg);font-weight:700;}
+  .step.done{border-color:var(--ok);color:var(--ok);}
+  .note{background:var(--annot-bg);border-left:3px solid var(--annot);padding:8px 10px;font-size:11.5px;color:#6B4A22;margin-top:8px;}
+  @media (max-width:700px){.row{flex-direction:column;align-items:stretch;}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="brand">Phase 2 · Wireframes v1.3.2</span>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-s="dashboard">Dashboard</button>
+    <button class="tab" data-s="findash">Financial Dashboard</button>
+    <button class="tab" data-s="controlsheet">Control Sheet</button>
+    <button class="tab" data-s="saledeed">Sale Deed Action</button>
+    <button class="tab" data-s="direct">Direct Sale Deed</button>
+    <button class="tab" data-s="changes">Change Requests</button>
+    <button class="tab" data-s="mytasks">My Tasks</button>
+    <button class="tab" data-s="search">Search</button>
+    <button class="tab" data-s="reports">Reports</button>
+    <button class="tab" data-s="audit">Audit Trail</button>
+  </div>
+</div>
+
+<div class="sheet">
+
+  <!-- DASHBOARD -->
+  <div class="drawing scr" id="dashboard">
+    <div class="reg-tl"></div><div class="reg-br"></div>
+    <h1 class="sheet-title">Sheet 01 — Not to scale, layout reference only</h1>
+    <h2 class="screen-name">Dashboard</h2>
+
+    <div class="region"><span class="tag">1</span>
+      <div class="region-label">Filter bar</div>
+      <div class="row">
+        <span class="placeholder-input">Project: All ▾</span>
+        <span class="placeholder-input">Date range ▾</span>
+        <span class="placeholder-input">Viewing as: Management ▾</span>
+      </div>
+    </div>
+
+    <div class="region"><span class="tag">2</span>
+      <div class="region-label">Unit summary (§78)</div>
+      <div class="row">
+        <span class="chip">Total Units: 42</span><span class="chip">Allocation Pending: 3</span><span class="chip">Allocation Approved: 5</span>
+        <span class="chip">ATS: 9</span><span class="chip">Sale Deed: 14</span><span class="chip">Direct Sale Deed: 4</span>
+        <span class="chip">Completed: 6</span><span class="chip">Cancelled: 1</span>
+      </div>
+    </div>
+
+    <div class="region"><span class="tag">3</span>
+      <div class="region-label">Workflow summary — pending by role (§78)</div>
+      <div class="row">
+        <span class="chip">CRM: 4</span><span class="chip">CSO: 1</span><span class="chip">Management: 3</span>
+        <span class="chip">Legal Exec: 2</span><span class="chip">Legal Mgr: 2</span><span class="chip">CFO: 3</span>
+        <span class="chip">Admin: 1</span><span class="chip">CRM Exec: 5</span>
+      </div>
+    </div>
+
+    <div class="region"><span class="tag">4</span>
+      <div class="region-label">Exception summary (§78)</div>
+      <div class="row">
+        <span class="chip">Financial Exceptions: 6</span><span class="chip">Reopened: 1</span><span class="chip">Cancellations: 1</span>
+        <span class="chip">Unit Changes: 0</span><span class="chip">Customer Changes: 1</span><span class="chip">Mgmt Overrides: 2</span>
+        <span class="chip">Legal Mgr Acting: 5</span>
+      </div>
+    </div>
+
+    <div class="region"><span class="tag">5</span>
+      <div class="region-label">Unit-wise table (§80 — full column set)</div>
+      <table>
+        <tr><th>Project</th><th>Unit</th><th>Customer</th><th>CRM</th><th>Workflow Type</th><th>Current Stage</th><th>Responsible</th><th>Acting User</th><th>Physical Holder</th><th>Days Pending</th><th>Financial</th><th>Overall</th></tr>
+        <tr><td>Trident Experia</td><td>B-901</td><td>Ojesh Agrawal</td><td>Kevin Patel</td><td>Sale Deed</td><td>CFO Receipt Check</td><td>CFO</td><td>Vaibhav Bhai</td><td>CFO</td><td>2</td><td><span class="stamp warn">2 Pending</span></td><td><span class="stamp warn">Attention</span></td></tr>
+        <tr><td>Trident Experia</td><td>B-902</td><td>R. Shah</td><td>Rohan Mehta</td><td class="tag2">Direct Sale Deed</td><td>Legal Manager Check</td><td>Legal Mgr</td><td>Vaibhav Bhai (CFO acting)</td><td>Legal Mgr</td><td>1</td><td><span class="stamp idle">N/A</span></td><td><span class="stamp pending">In Progress</span></td></tr>
+        <tr><td>Trident Experia</td><td>B-903</td><td>P. Iyer</td><td>Kevin Patel</td><td>ATS</td><td>Registration</td><td>Legal Exec</td><td>Nidhi</td><td>Legal Exec</td><td>4</td><td><span class="stamp idle">N/A</span></td><td><span class="stamp pending">In Progress</span></td></tr>
+      </table>
+      <div class="note">Row 2 shows a Direct Sale Deed case — "ATS" never appears as a Workflow Type value for it; it jumps straight to Sale Deed. Row 1 shows the "Attention Required" overall status this table exists to surface — document work is fine, financials aren't. Every row opens the Control Sheet (next screen) on click.</div>
+    </div>
+
+    <div class="legend"><h3>Notes</h3><ol>
+      <li>Filters persist across the whole dashboard session; "Viewing as" only changes which pending-count chips are highlighted, not what data is visible — everyone with dashboard access sees everything (§78).</li>
+      <li>Summary chips are click-through: clicking "CFO: 3" jumps to a pre-filtered My Tasks-style list.</li>
+      <li>Table is sortable on every column; Days Pending sorts descending by default so the oldest bottlenecks surface first.</li>
+    </ol></div>
+    <div class="titleblock"><span>DASHBOARD — PROJECT/UNIT-WISE STATUS</span><span>REF: §78–80</span><span>REV A</span></div>
+  </div>
+
+  <!-- CONTROL SHEET -->
+  <div class="drawing scr" id="controlsheet" style="display:none">
+    <div class="reg-tl"></div><div class="reg-br"></div>
+    <h1 class="sheet-title">Sheet 02 — Not to scale, layout reference only</h1>
+    <h2 class="screen-name">Transaction Control Sheet</h2>
+
+    <div class="region"><span class="tag">1</span>
+      <div class="region-label">Identity header (v1.3 — current customer only; full history in region 7)</div>
+      <div class="row"><span class="chip">Trident Experia · B-901</span><span class="chip">Ojesh Agrawal (current customer)</span><span class="chip">SD ₹74,00,000</span>
+        <span class="chip">Sale Deed workflow: V1</span>
+        <span class="placeholder-input">⎙ Print Control Sheet (§83)</span></div>
+      <div class="note">"Sale Deed workflow: V1" (v1.3) shows which workflow-definition version this transaction is running on — relevant once Super Admin has activated a V2 for new transactions; this one stays on V1 permanently, even after V2 goes live.</div>
+    </div>
+
+    <div class="region"><span class="tag">2</span>
+      <div class="region-label">Unit Allocation block</div>
+      <div class="row">
+        <span class="chip">Client Confirmation Date</span><span class="chip">Onboarding Date</span><span class="chip">Source of Booking</span>
+        <span class="chip">Booked By</span><span class="chip">Payment Plan</span>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <span class="stamp ok">CCF ✓</span><span class="stamp ok">KYC ✓</span><span class="stamp ok">CSO Approved</span><span class="stamp ok">Mgmt Approved</span>
+      </div>
+    </div>
+
+    <div class="region"><span class="tag">3</span>
+      <div class="region-label">ATS block (replaced entirely by a banner if Direct Sale Deed — see screen 4)</div>
+      <div class="row">
+        <span class="stamp ok">Mgmt Approval</span><span class="stamp ok">Customer Email</span><span class="stamp ok">Legal Exec / Garvi</span>
+        <span class="stamp ok">Legal Mgr Check</span><span class="stamp ok">CFO Ledger</span><span class="stamp ok">Customer Signature</span>
+        <span class="stamp ok">Legal Final</span><span class="stamp ok">SRO Registration</span><span class="stamp ok">Admin Scan</span>
+        <span class="stamp ok">Scan Check</span><span class="stamp ok">Handover</span>
+      </div>
+    </div>
+
+    <div class="region"><span class="tag">4</span>
+      <div class="region-label">Sale Deed block</div>
+      <div class="row">
+        <span class="stamp ok">Mgmt Approval</span><span class="stamp ok">Legal Exec / Garvi</span><span class="stamp ok">Legal Mgr Check</span>
+        <span class="stamp warn">CFO Receipt Checklist — 2 pending</span><span class="stamp idle">Customer Signature</span><span class="stamp idle">Legal Final</span>
+        <span class="stamp idle">Registration</span><span class="stamp idle">Index II / Cert. Copy</span><span class="stamp idle">Admin Scan</span>
+        <span class="stamp idle">Scan Check</span><span class="stamp idle">Handover</span>
+      </div>
+      <table style="margin-top:8px">
+        <tr><th>Component</th><th>Amount</th><th>Receipt</th></tr>
+        <tr><td>Basic</td><td>₹44,00,000</td><td><span class="stamp ok">✓</span></td></tr>
+        <tr><td>GST</td><td>₹44,000</td><td><span class="stamp ok">✓</span></td></tr>
+        <tr><td>Maintenance Deposit</td><td>₹50,000</td><td><span class="stamp warn">Pending</span></td></tr>
+        <tr><td>TDS</td><td>N/A</td><td><span class="stamp warn">Pending</span></td></tr>
+      </table>
+      <div class="note">Sale Deed can be Registered and Scanned while this table still shows pending rows — the block's own status doesn't turn green until every row does. TDS pending behaves the same as any other component: it doesn't block registration, it just stays open here until resolved.</div>
+    </div>
+
+    <div class="region"><span class="tag">5</span>
+      <div class="region-label">Five independent status chips (§103)</div>
+      <div class="row">
+        <span class="stamp ok">Workflow: Registered</span><span class="stamp ok">Document: Scanned</span>
+        <span class="stamp warn">Financial: 2 Pending</span><span class="stamp idle">Handover: Pending</span>
+        <span class="stamp warn">Overall: Attention Required</span>
+      </div>
+    </div>
+
+    <div class="region"><span class="tag">6</span>
+      <div class="region-label">Physical custody (v1.3.1 — one row per DOCUMENT, not one row per transaction)</div>
+      <div class="row"><span class="chip">Sale Deed print — currently with: <b>CFO</b></span>
+        <span class="chip">ATS print — currently with: <b>Admin (filed)</b></span>
+        <span class="placeholder-input">⇄ Transfer Physical Document</span></div>
+      <table style="margin-top:6px">
+        <tr><th>Document</th><th>From</th><th>To</th><th>Date/time</th><th>User</th><th>Remark</th></tr>
+        <tr><td>Sale Deed print</td><td>Legal Manager</td><td>CFO</td><td>28 Jul, 11:20</td><td>Vaibhav Bhai</td><td>—</td></tr>
+        <tr><td>Sale Deed print</td><td>Legal Executive</td><td>Legal Manager</td><td>26 Jul, 15:40</td><td>Pranav Bhai</td><td>—</td></tr>
+        <tr><td>ATS print</td><td>Admin Executive</td><td>Admin Executive (filed)</td><td>2 Jun, 09:10</td><td>Dipak Bhai</td><td>Post-registration filing</td></tr>
+      </table>
+      <div class="note">v1.3.1 fix: a transaction can have several physical documents moving independently (its ATS print, its Sale Deed print, a receiving copy) — this table now identifies WHICH document each row is about, so "where is the Sale Deed right now" and "where is the ATS right now" can have different, correct answers for the same transaction. "Transfer Physical Document" now asks which document, in addition to From/To/date/remark; it's still a real, standalone action that anyone involved in the handoff can log — it never fires automatically when a workflow stage advances.</div>
+    </div>
+
+    <div class="region"><span class="tag">7</span>
+      <div class="region-label">Changes &amp; Exceptions</div>
+      <div class="row">
+        <span class="stamp idle">Cancellation: none</span>
+        <span class="stamp idle">Unit Change: none</span>
+        <span class="stamp ok">Customer Change: 1 (history →)</span>
+        <span class="stamp warn">Direct Sale Deed: N/A</span>
+        <span class="stamp idle">Management Skip: none</span>
+        <span class="stamp idle">Reopen: none</span>
+      </div>
+      <table style="margin-top:6px">
+        <tr><th>Existing customer</th><th>Proposed</th><th>Approved</th><th>Date</th><th>Reason</th></tr>
+        <tr><td>R. Iyer</td><td>Ojesh Agrawal</td><td>Ojesh Agrawal</td><td>12 Jun 2026</td><td>Sale re-assigned within family</td></tr>
+      </table>
+      <div class="note">Every row here is permanent (v1.3) — a later change adds a new row, nothing is overwritten. Clicking "Change Requests" in the top nav opens the full request/approval screen for raising a new one.</div>
+    </div>
+
+    <div class="region"><span class="tag">8</span>
+      <div class="region-label">Formal Remark vs. Internal Comment (v1.3 — kept visibly separate, not one generic box)</div>
+      <div class="row" style="align-items:flex-start">
+        <div style="flex:1;min-width:220px">
+          <div class="field-label" style="text-transform:uppercase;letter-spacing:.05em">Formal remarks (from workflow actions)</div>
+          <div class="chip" style="display:block;margin-bottom:4px">CFO, 28 Jul: "Deposit + TDS awaited from customer"</div>
+          <div class="chip" style="display:block">Legal Mgr, 26 Jul: send-back — "Garvi ref missing"</div>
+        </div>
+        <div style="flex:1;min-width:220px">
+          <div class="field-label" style="text-transform:uppercase;letter-spacing:.05em">Internal comments (operational, do not move workflow)</div>
+          <div class="chip" style="display:block;margin-bottom:4px">Kevin Patel: "@CFO any update on the deposit?"</div>
+          <span class="placeholder-input">+ Add comment / @mention</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend"><h3>Notes</h3><ol>
+      <li>Every stamp is clickable → opens that stage's audit entry (who, when, remark) inline, no page change.</li>
+      <li>This screen is read-heavy by design — it's the digital replacement for the physical paper control sheet on the desk. Approvals/send-backs still happen on the workflow action screens (see Sale Deed Action tab); the two new regions here (Physical Custody transfer, Internal Comments) are real actions too, but neither one moves a workflow stage.</li>
+      <li>Print output (§83) mirrors this layout as a clean single-page PDF for anyone who still wants a physical file copy.</li>
+    </ol></div>
+    <div class="titleblock"><span>TRANSACTION CONTROL SHEET</span><span>REF: §81–83, Parts D/E/F/G</span><span>REV C — v1.3.1</span></div>
+  </div>
+
+  <!-- SALE DEED ACTION -->
+  <div class="drawing scr" id="saledeed" style="display:none">
+    <div class="reg-tl"></div><div class="reg-br"></div>
+    <h1 class="sheet-title">Sheet 03 — Not to scale, layout reference only</h1>
+    <h2 class="screen-name">Sale Deed — Workflow Action Screen</h2>
+
+    <div class="region"><span class="tag">1</span>
+      <div class="region-label">Stage stepper — all 12 Sale Deed stages, current one highlighted</div>
+      <div class="stepperwrap">
+        <div class="step done">Mgmt Approval</div><div class="step done">Legal Exec / Garvi</div><div class="step done">Legal Mgr Check</div>
+        <div class="step current">CFO Receipt Check</div><div class="step">Customer Signature</div><div class="step">Legal Final</div>
+        <div class="step">Registration</div><div class="step">Index II / Cert.</div><div class="step">Admin Scan</div>
+        <div class="step">Scan Check</div><div class="step">Handover</div>
+      </div>
+    </div>
+
+    <div class="region"><span class="tag">2</span>
+      <div class="region-label">Active stage form — CFO Receipt Check (role-gated: only CFO, or a delegate, sees this unlocked)</div>
+      <div class="row">
+        <span class="chip">☑ Basic Amount</span><span class="chip">☑ GST</span><span class="chip">☑ Running Maintenance</span>
+        <span class="chip">☐ Maintenance Deposit</span><span class="chip">☑ Stamp Duty</span><span class="chip">☑ Legal Fees</span>
+        <span class="chip">☑ PNG</span><span class="chip">☐ TDS</span>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div><span class="field-label">Loan Cheque</span><span class="placeholder-input">Bank / Cheque No. / Amount / Date</span></div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div><span class="field-label">Remark (this stage)</span><span class="placeholder-input" style="width:260px">Deposit + TDS awaited from customer</span></div>
+      </div>
+    </div>
+
+    <div class="region"><span class="tag">3</span>
+      <div class="region-label">Approve-with-pending callout</div>
+      <div class="note">CFO can press <b>Approve</b> here even with 2 items unchecked. Doing so creates two open Financial Exceptions (Maintenance Deposit, TDS) and notifies CFO + Management + CRM — the workflow moves on to Customer Signature regardless. This is the one deliberate "approve anyway" path in the whole system (§48).</div>
+    </div>
+
+    <div class="region"><span class="tag">4</span>
+      <div class="region-label">Physical custody strip</div>
+      <div class="row"><span class="chip">Physical document currently with: <b>CFO</b></span></div>
+    </div>
+
+    <div class="region"><span class="tag">5</span>
+      <div class="region-label">Action bar</div>
+      <div class="row">
+        <span class="placeholder-input">Approve &amp; move forward</span>
+        <span class="placeholder-input" style="border-color:var(--pending);color:var(--pending)">Send Back (remark required)</span>
+      </div>
+    </div>
+
+    <div class="region"><span class="tag">6</span>
+      <div class="region-label">Open financial exceptions (this transaction) — side panel</div>
+      <table>
+        <tr><th>Component</th><th>Amount</th><th>Status</th></tr>
+        <tr><td>Maintenance Deposit</td><td>₹50,000</td><td><span class="stamp warn">Open</span></td></tr>
+        <tr><td>TDS</td><td>—</td><td><span class="stamp warn">Open</span></td></tr>
+      </table>
+    </div>
+
+    <div class="region"><span class="tag">7</span>
+      <div class="region-label">Audit preview (last 2 actions on this transaction)</div>
+      <table>
+        <tr><th>When</th><th>Who</th><th>Role</th><th>Action</th></tr>
+        <tr><td>28 Jul, 11:40</td><td>Vaibhav Bhai</td><td>CFO, acting as Legal Manager</td><td>Approved — Legal Mgr Check</td></tr>
+        <tr><td>26 Jul, 15:02</td><td>Nidhi</td><td>Legal Executive</td><td>Approved — Garvi Ref GRV-2291</td></tr>
+      </table>
+      <div class="note">"CFO, acting as Legal Manager" is shown deliberately, every time nominal and actual role differ — this is the audit requirement from §66, not an edge case to hide.</div>
+    </div>
+
+    <div class="legend"><h3>Notes</h3><ol>
+      <li>Same screen shape is reused for every stage across Allocation/ATS/Sale Deed — only the form in region 2 changes. One workflow-action template, not 12+ bespoke screens.</li>
+      <li>Someone without permission to act on the current stage sees regions 1, 4, 6, 7 read-only and no form/action bar — same screen, view-only mode, not a separate "read-only" page.</li>
+    </ol></div>
+    <div class="titleblock"><span>SALE DEED — WORKFLOW ACTION</span><span>REF: §44–57</span><span>REV A</span></div>
+  </div>
+
+  <!-- DIRECT SALE DEED -->
+  <div class="drawing scr" id="direct" style="display:none">
+    <div class="reg-tl"></div><div class="reg-br"></div>
+    <h1 class="sheet-title">Sheet 04 — Not to scale, layout reference only</h1>
+    <h2 class="screen-name">Direct Sale Deed — Timeline</h2>
+
+    <div class="region"><span class="tag">1</span>
+      <div class="region-label">Master flow (§85) — ATS shown skipped, never simply absent</div>
+      <div class="flow">
+        <div class="flowstep">Allocation</div>
+        <div class="flowstep">CSO Approval</div>
+        <div class="flowstep">Mgmt Allocation Approval</div>
+        <div class="flowstep skip">ATS Skipped — Direct Sale Deed Case</div>
+        <div class="flowstep">Sale Deed Mgmt Approval</div>
+        <div class="flowstep">Sale Deed Workflow</div>
+        <div class="flowstep">Completed</div>
+      </div>
+    </div>
+
+    <div class="region"><span class="tag">2</span>
+      <div class="region-label">How the flag is set — at Allocation creation</div>
+      <div class="row">
+        <span class="chip">☑ Direct Sale Deed Case</span>
+        <span class="field-label">Direct Sale Deed Remark (mandatory when checked)</span>
+      </div>
+      <div class="placeholder-input" style="margin-top:4px;width:320px">BU received, ATS not required per management</div>
+    </div>
+
+    <div class="region"><span class="tag">3</span>
+      <div class="region-label">Callout</div>
+      <div class="note">Sale Deed Management Approval is still a separate, mandatory gate here — Direct Sale Deed skips ATS, never skips an approval (§43). On the Dashboard's Workflow Type column (Sheet 01, region 5), this shows as "Direct Sale Deed," not "ATS: N/A" — the distinction matters for anyone scanning the table quickly.</div>
+    </div>
+
+    <div class="legend"><h3>Notes</h3><ol>
+      <li>The dashed, amber "ATS Skipped" node is a deliberate visual break from the solid flow steps around it — it should read as "deliberately bypassed," not "broken" or "not yet started."</li>
+      <li>This timeline is a condensed view; clicking any node opens the full Control Sheet (Sheet 02) scrolled to that section.</li>
+    </ol></div>
+    <div class="titleblock"><span>DIRECT SALE DEED — MASTER TIMELINE</span><span>REF: §26, §85</span><span>REV A</span></div>
+  </div>
+
+  <!-- MY TASKS -->
+  <div class="drawing scr" id="mytasks" style="display:none">
+    <div class="reg-tl"></div><div class="reg-br"></div>
+    <h1 class="sheet-title">Sheet 05 — Not to scale, layout reference only</h1>
+    <h2 class="screen-name">My Tasks</h2>
+
+    <div class="region"><span class="tag">1</span>
+      <div class="region-label">View toggle (§87)</div>
+      <div class="row"><span class="chip">My Tasks (4)</span><span class="chip" style="opacity:.55">Pending with Others</span></div>
+    </div>
+
+    <div class="region"><span class="tag">2</span>
+      <div class="region-label">Task list (§86 columns)</div>
+      <table>
+        <tr><th>Project</th><th>Unit</th><th>Customer</th><th>Document</th><th>Stage</th><th>Date Received</th><th>Days Pending</th><th>Physical Holder</th><th>Action</th></tr>
+        <tr><td>Trident Experia</td><td>B-901</td><td>Ojesh Agrawal</td><td>Sale Deed</td><td>CFO Receipt Check</td><td>26 Jul</td><td>2</td><td>CFO</td><td><span class="placeholder-input">Open →</span></td></tr>
+        <tr><td>Trident Experia</td><td>B-904</td><td>M. Rao</td><td>ATS</td><td>Ledger Check</td><td>27 Jul</td><td>1</td><td>CFO</td><td><span class="placeholder-input">Open →</span></td></tr>
+      </table>
+      <div class="note">v1.3 fix: "Date Received" was missing from this table in the prior wireframe — added per §86's full column set. It's the timestamp this stage became this user's responsibility, distinct from Days Pending (a derived count).</div>
+    </div>
+
+    <div class="region"><span class="tag">3</span>
+      <div class="region-label">"Pending with Others" example (§87)</div>
+      <div class="chip">A-101 — Sale Deed — Pending with Legal Executive — 3 days</div>
+    </div>
+
+    <div class="legend"><h3>Notes</h3><ol>
+      <li>My Tasks is scoped to stages this user's role (or an active delegation) can act on right now — same eligibility rule as the workflow action screen's role gate.</li>
+      <li>Clicking any row opens the Workflow Action screen (Sheet 03) directly at that stage.</li>
+    </ol></div>
+    <div class="titleblock"><span>MY TASKS</span><span>REF: §86–87</span><span>REV A</span></div>
+  </div>
+
+  <!-- FINANCIAL DASHBOARD (new, v1.3) -->
+  <div class="drawing scr" id="findash" style="display:none">
+    <div class="reg-tl"></div><div class="reg-br"></div>
+    <h1 class="sheet-title">Sheet 07 — Not to scale, layout reference only</h1>
+    <h2 class="screen-name">Financial Management Dashboard</h2>
+
+    <div class="region"><span class="tag">1</span>
+      <div class="region-label">Headline figures (§90)</div>
+      <div class="row">
+        <span class="chip">Sale Deeds Completed: 14</span>
+        <span class="chip">With Financial Exceptions: 6</span>
+        <span class="chip">Total Pending Amount: ₹18,40,000</span>
+      </div>
+    </div>
+
+    <div class="region"><span class="tag">2</span>
+      <div class="region-label">Pending amount by component — each row drills down to the transactions behind it</div>
+      <table>
+        <tr><th>Component</th><th>Pending Amount</th><th>Transactions</th><th></th></tr>
+        <tr><td>Basic</td><td>₹0</td><td>0</td><td></td></tr>
+        <tr><td>GST</td><td>₹0</td><td>0</td><td></td></tr>
+        <tr><td>Running Maintenance</td><td>₹1,20,000</td><td>2</td><td><span class="placeholder-input">View →</span></td></tr>
+        <tr><td>Maintenance Deposit</td><td>₹3,50,000</td><td>5</td><td><span class="placeholder-input">View →</span></td></tr>
+        <tr><td>Stamp Duty</td><td>₹0</td><td>0</td><td></td></tr>
+        <tr><td>Legal Fees</td><td>₹40,000</td><td>1</td><td><span class="placeholder-input">View →</span></td></tr>
+        <tr><td>PNG</td><td>₹30,000</td><td>1</td><td><span class="placeholder-input">View →</span></td></tr>
+        <tr><td>TDS</td><td>₹13,00,000</td><td>4</td><td><span class="placeholder-input">View →</span></td></tr>
+      </table>
+      <div class="note">Clicking any non-zero row opens a filtered transaction list (same shape as the Dashboard's unit-wise table), not just a number. TDS being the largest pending bucket here is expected and fine — it doesn't block anything, per the confirmed TDS rule.</div>
+    </div>
+
+    <div class="region"><span class="tag">3</span>
+      <div class="region-label">Independence reminder</div>
+      <div class="note">This dashboard can show real pending amounts against transactions whose Document/Handover status is already "Complete." That's not a bug to fix — Financial status is deliberately independent of Workflow/Document/Handover status (§103), and this screen exists specifically to keep pending money visible even after the paperwork is done.</div>
+    </div>
+
+    <div class="legend"><h3>Notes</h3><ol>
+      <li>Same headline-cards + drill-down-table pattern as the main Dashboard — kept visually consistent rather than inventing a new layout language for one screen.</li>
+    </ol></div>
+    <div class="titleblock"><span>FINANCIAL MANAGEMENT DASHBOARD</span><span>REF: §90</span><span>NEW — v1.3</span></div>
+  </div>
+
+  <!-- CHANGE REQUESTS (new, v1.3) -->
+  <div class="drawing scr" id="changes" style="display:none">
+    <div class="reg-tl"></div><div class="reg-br"></div>
+    <h1 class="sheet-title">Sheet 08 — Not to scale, layout reference only</h1>
+    <h2 class="screen-name">Change Requests — Cancellation / Unit Change / Customer Change</h2>
+
+    <div class="region"><span class="tag">1</span>
+      <div class="region-label">Raise a request (CRM) — one screen, three request types</div>
+      <div class="row">
+        <span class="chip" style="font-weight:700">● Cancellation</span><span class="chip">○ Unit Change</span><span class="chip">○ Customer Change</span>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div><span class="field-label">Reason (formal, permanent — distinct from an internal comment)</span><span class="placeholder-input" style="width:260px">Customer requested refund</span></div>
+        <div><span class="field-label">Request Date</span><span class="placeholder-input">28/07/2026</span></div>
+        <div><span class="field-label">Requested By</span><span class="chip">Kevin Patel (auto-filled, logged-in user)</span></div>
+        <div><span class="field-label">☐ Has financial/refund implications</span></div>
+      </div>
+      <div class="note">v1.3.1: every request now permanently records who raised it — not just via the general audit log, but as its own field on the request row itself, same as the Reason.</div>
+    </div>
+
+    <div class="region"><span class="tag">2</span>
+      <div class="region-label">Approval status — this request</div>
+      <div class="row">
+        <span class="stamp warn">CFO: Pending</span><span class="stamp idle">Management: Waiting on CFO</span>
+      </div>
+      <div class="note">Cancellation and Customer Change go straight to Management unless financial implications are flagged, in which case CFO approves first. Unit Change always goes to Management. Send Back at either stage requires a remark and returns to Requested — same pattern as every other workflow in the system, not a special case.</div>
+    </div>
+
+    <div class="region"><span class="tag">3</span>
+      <div class="region-label">What happens on approval — shown so the requester understands the consequence before submitting</div>
+      <table>
+        <tr><th>Request type</th><th>Effect</th></tr>
+        <tr><td>Cancellation</td><td>This transaction → Cancelled (permanent). Unit becomes available for a new transaction.</td></tr>
+        <tr><td>Unit Change</td><td>This transaction → Superseded (permanent, unit_id never changes). A brand-new transaction is created on the new unit, linked back to this one.</td></tr>
+        <tr><td>Customer Change</td><td>Current customer on this transaction updates. This request row becomes a permanent history entry — nothing is overwritten.</td></tr>
+      </table>
+    </div>
+
+    <div class="region"><span class="tag">4</span>
+      <div class="region-label">Unit history — shown when raising against a unit that already has past transactions</div>
+      <table>
+        <tr><th>Transaction</th><th>Customer</th><th>Lifecycle</th><th>Dates</th></tr>
+        <tr><td>TXN-0231</td><td>R. Iyer</td><td><span class="stamp idle">Cancelled</span></td><td>Jan–Apr 2026</td></tr>
+        <tr><td>TXN-0389 (this one)</td><td>Ojesh Agrawal</td><td><span class="stamp ok">Active</span></td><td>Jun 2026 –</td></tr>
+      </table>
+      <div class="note">A unit can carry several rows here over time — this is the visible face of the "one ACTIVE transaction per unit, unlimited historical ones" rule (v1.3).</div>
+    </div>
+
+    <div class="legend"><h3>Notes</h3><ol>
+      <li>One screen, three request types, rather than three separate screens — they share the same approval-and-consequence shape, which is also how the backend models them (each is its own `workflow_type`, same engine).</li>
+    </ol></div>
+    <div class="titleblock"><span>CHANGE REQUESTS</span><span>REF: §58–61, Parts A3/A4/A5</span><span>REV B — v1.3.1</span></div>
+  </div>
+
+  <!-- GLOBAL SEARCH (new, v1.3.2) -->
+  <div class="drawing scr" id="search" style="display:none">
+    <div class="reg-tl"></div><div class="reg-br"></div>
+    <h1 class="sheet-title">Sheet 10 — Not to scale, layout reference only</h1>
+    <h2 class="screen-name">Global Search</h2>
+
+    <div class="region"><span class="tag">1</span>
+      <div class="region-label">Search fields (§88) — simple filter bar, not a new reporting module</div>
+      <div class="row">
+        <span class="placeholder-input">Project ▾</span><span class="placeholder-input">Unit</span><span class="placeholder-input">Customer</span>
+        <span class="placeholder-input">CRM ▾</span><span class="placeholder-input">Booked By ▾</span><span class="placeholder-input">Source of Booking ▾</span>
+        <span class="placeholder-input">Payment Plan ▾</span><span class="placeholder-input">Document Type ▾</span>
+        <span class="placeholder-input">SRO</span><span class="placeholder-input">Registration Number</span>
+        <span class="placeholder-input">Current Stage ▾</span><span class="placeholder-input">Registration Date</span>
+        <span class="placeholder-input">🔍 Search</span>
+      </div>
+      <div class="note">Every field is optional and combinable — a CRM typing just a customer surname, or Legal Executive pasting a registration number, both work. This reuses the same filter/table visual language as the Dashboard and Reports screens, not a new component.</div>
+    </div>
+
+    <div class="region"><span class="tag">2</span>
+      <div class="region-label">Results — same shape as the Dashboard's unit-wise table, opens the Control Sheet on click</div>
+      <table>
+        <tr><th>Project</th><th>Unit</th><th>Customer</th><th>CRM</th><th>Current Stage</th><th>Registration No.</th></tr>
+        <tr><td>Trident Experia</td><td>B-901</td><td>Ojesh Agrawal</td><td>Kevin Patel</td><td>CFO Receipt Check</td><td>—</td></tr>
+      </table>
+    </div>
+
+    <div class="legend"><h3>Notes</h3><ol>
+      <li>This is deliberately a thin screen — one filter bar, one results table, click-through to the Control Sheet (Sheet 02). It is not the Reports screen (Sheet 09) and doesn't duplicate it: Search finds a specific transaction fast; Reports produces a filtered/exportable list for analysis.</li>
+    </ol></div>
+    <div class="titleblock"><span>GLOBAL SEARCH</span><span>REF: §88</span><span>NEW — v1.3.2</span></div>
+  </div>
+
+  <!-- REPORTS (new, v1.3) -->
+  <div class="drawing scr" id="reports" style="display:none">
+    <div class="reg-tl"></div><div class="reg-br"></div>
+    <h1 class="sheet-title">Sheet 09 — Not to scale, layout reference only</h1>
+    <h2 class="screen-name">Reports</h2>
+
+    <div class="region"><span class="tag">1</span>
+      <div class="region-label">Report selector (§89 — 19 named reports)</div>
+      <div class="row">
+        <span class="placeholder-input">Report: Financial Exception Report ▾</span>
+        <span class="placeholder-input">Project: All ▾</span><span class="placeholder-input">Date range ▾</span>
+        <span class="placeholder-input">⬇ Export</span>
+      </div>
+    </div>
+
+    <div class="region"><span class="tag">2</span>
+      <div class="region-label">Full report catalogue (selector dropdown contents)</div>
+      <div class="row">
+        <span class="chip">Unit Status</span><span class="chip">Workflow Pending</span><span class="chip">Department Pending</span>
+        <span class="chip">User Pending</span><span class="chip">Financial Exception</span><span class="chip">Registration</span>
+        <span class="chip">Handover</span><span class="chip">Cancellation</span><span class="chip">Unit Change</span>
+        <span class="chip">Customer Change</span><span class="chip">Direct Sale Deed</span><span class="chip">Management Exception</span>
+        <span class="chip">Super Admin Financial Change</span><span class="chip">Legal Manager Acting</span><span class="chip">Physical Custody</span>
+        <span class="chip">Complete Audit</span><span class="chip">Booking Source</span><span class="chip">Booked By</span><span class="chip">Payment Plan</span>
+      </div>
+    </div>
+
+    <div class="region"><span class="tag">3</span>
+      <div class="region-label">Result table — shown here for Financial Exception Report; every report follows this same result-table shape</div>
+      <table>
+        <tr><th>Project</th><th>Unit</th><th>Customer</th><th>Component</th><th>Amount</th><th>Days Open</th></tr>
+        <tr><td>Trident Experia</td><td>B-901</td><td>Ojesh Agrawal</td><td>Maintenance Deposit</td><td>₹50,000</td><td>2</td></tr>
+        <tr><td>Trident Experia</td><td>B-901</td><td>Ojesh Agrawal</td><td>TDS</td><td>—</td><td>2</td></tr>
+      </table>
+      <div class="note">Every row is clickable → opens the Control Sheet. Export produces the same table as CSV/PDF. All 19 reports share this selector → filter → table → export → drill-down shape; only the columns and underlying query differ per report (§3 API design, one `GET /reports/:reportKey` per report).</div>
+    </div>
+
+    <div class="legend"><h3>Notes</h3><ol>
+      <li>This wireframe shows the shared shape once rather than 19 near-identical mockups — a developer building this should treat the result-table + filter pattern as one reusable component, not 19 bespoke screens.</li>
+    </ol></div>
+    <div class="titleblock"><span>REPORTS</span><span>REF: §89</span><span>NEW — v1.3</span></div>
+  </div>
+
+  <!-- AUDIT TRAIL -->
+  <div class="drawing scr" id="audit" style="display:none">
+    <div class="reg-tl"></div><div class="reg-br"></div>
+    <h1 class="sheet-title">Sheet 06 — Not to scale, layout reference only</h1>
+    <h2 class="screen-name">Audit Trail</h2>
+
+    <div class="region"><span class="tag">1</span>
+      <div class="region-label">Filter bar (Super Admin only screen, §71)</div>
+      <div class="row"><span class="placeholder-input">Transaction / Unit ▾</span><span class="placeholder-input">Action type ▾</span><span class="placeholder-input">Date range ▾</span></div>
+    </div>
+
+    <div class="region"><span class="tag">2</span>
+      <div class="region-label">Log table — no edit or delete control exists anywhere on this screen, by design</div>
+      <table>
+        <tr><th>Timestamp</th><th>User</th><th>Actual Role</th><th>Nominal Role</th><th>Action</th><th>From → To</th><th>Remark</th></tr>
+        <tr><td>28 Jul 11:40</td><td>Vaibhav Bhai</td><td>CFO</td><td>Legal Manager</td><td>Approve</td><td>Legal Mgr Check → CFO Receipt Check</td><td>—</td></tr>
+        <tr><td>27 Jul 09:12</td><td>Bharti Ma'am</td><td>Management</td><td>Management</td><td>Send Back</td><td>Mgmt Approval → Legal Exec Print</td><td>Garvi ref missing</td></tr>
+        <tr><td>20 Jul 16:05</td><td>Priya Shah</td><td>Super Admin</td><td>Super Admin</td><td>Financial Change</td><td>Stamp Duty ₹2,10,000 → ₹2,15,500</td><td>Corrected slab calc error</td></tr>
+      </table>
+    </div>
+
+    <div class="legend"><h3>Notes</h3><ol>
+      <li>Every row is permanent — this screen has no delete affordance in the UI because the database layer doesn't grant delete on this table to any application role (§71, §94).</li>
+      <li>Rows where Actual Role ≠ Nominal Role are the "acting" cases (§66) — worth a visually distinct row treatment (e.g. a small icon) so Management can scan for them quickly in the Management Exception Report.</li>
+    </ol></div>
+    <div class="titleblock"><span>AUDIT TRAIL — IMMUTABLE LOG</span><span>REF: §71, §94</span><span>REV A</span></div>
+  </div>
+
+</div>
+
+<script>
+  document.getElementById('tabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.tab'); if (!btn) return;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.scr').forEach(s => s.style.display = 'none');
+    document.getElementById(btn.dataset.s).style.display = 'block';
+  });
+</script>
+</body>
+</html>

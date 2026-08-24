@@ -1,0 +1,37 @@
+%% Carried forward unchanged from v1.2 — no correction in the v1.3 change list applied to this diagram.
+
+stateDiagram-v2
+    [*] --> ATS_Mgmt_Pending: CRM requests ATS Execution Approval
+
+    ATS_Mgmt_Pending --> Customer_Email_Pending: Management Approves\n(Management Approval #2 of 3)
+    ATS_Mgmt_Pending --> ATS_Mgmt_Pending: Management Sends Back\n(remark mandatory)
+
+    Customer_Email_Pending --> Legal_Print_Pending: CRM uploads customer approval email PDF
+
+    Legal_Print_Pending --> Legal_Manager_Check: Legal Executive prints ATS,\ncompletes Garvi, enters ref no.
+
+    Legal_Manager_Check --> CFO_Ledger_Check: Legal Manager Approves\n(may be performed by CRM/CFO acting, §66)
+    Legal_Manager_Check --> Legal_Print_Pending: Legal Manager Sends Back
+
+    CFO_Ledger_Check --> Customer_Signature_Pending: CFO ticks Ledger Verified
+    CFO_Ledger_Check --> Legal_Print_Pending: CFO Sends Back
+
+    Customer_Signature_Pending --> Legal_Final_Verification: CRM obtains physical\ncustomer signature
+    note right of Customer_Signature_Pending
+        Physical custody log:
+        Legal Exec → CRM (draft)
+        CRM → Legal Manager (signed, next step)
+    end note
+
+    Legal_Final_Verification --> SRO_Registration_Pending: Legal Manager final Approve
+    Legal_Final_Verification --> Customer_Signature_Pending: Legal Manager Sends Back
+
+    SRO_Registration_Pending --> Admin_Scan_Pending: Registration no. + date entered\nby Legal Executive
+
+    Admin_Scan_Pending --> Admin_Scan_Pending: Blocked until Sales Close\nConfirmation ticked (§40, §109)
+    Admin_Scan_Pending --> CRMExec_Scan_Check: Admin Exec confirms scan +\nAccounts copy + Sales Close
+
+    CRMExec_Scan_Check --> Handover_Pending: CRM Exec marks Scan Verified
+
+    Handover_Pending --> ATS_Completed: Handover date + signed\nreceiving copy uploaded (mandatory, §109)
+    ATS_Completed --> [*]: Unit status → ATS_REGISTERED\nSale Deed Mgmt Approval unlocked

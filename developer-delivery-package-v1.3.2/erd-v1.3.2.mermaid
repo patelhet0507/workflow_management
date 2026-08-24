@@ -1,0 +1,209 @@
+erDiagram
+    USERS ||--o{ TRANSACTIONS : "crm_user_id"
+    PROJECTS ||--o{ UNITS : "has"
+    UNITS ||--o{ TRANSACTIONS : "MANY over time (v1.3 — only one may be lifecycle_status=ACTIVE)"
+    TRANSACTIONS |o--o| TRANSACTIONS : "source_transaction_id — Unit Change lineage only (v1.3.2)"
+    TRANSACTIONS |o--o| TRANSACTIONS : "previous_cancelled_transaction_id — Cancellation+Rebooking link only, never Unit Change (v1.3.2, new)"
+    SOURCE_MASTER ||--o{ TRANSACTIONS : "source_of_booking"
+    BOOKED_BY_MASTER ||--o{ TRANSACTIONS : "booked_by"
+    BOOKED_BY_MASTER |o--o| BOOKED_BY_MASTER : "merged_into_id (v1.3)"
+    BOOKED_BY_MASTER ||--o{ BOOKED_BY_ALIASES : "has (v1.3)"
+    PAYMENT_PLAN_MASTER ||--o{ TRANSACTIONS : "payment_plan"
+
+    TRANSACTIONS ||--|| TRANSACTION_FINANCIALS : "has"
+    TRANSACTIONS ||--o{ FINANCIAL_AMOUNT_CHANGES : "logs"
+    TRANSACTIONS ||--o{ FINANCIAL_RECEIPT_CHECKS : "has"
+    TRANSACTIONS ||--o{ FINANCIAL_EXCEPTIONS : "may have"
+    TRANSACTIONS ||--o{ LOAN_CHEQUE_DETAILS : "has"
+
+    WORKFLOW_DEFINITIONS ||--o{ WORKFLOW_DEFINITION_VERSIONS : "versions (v1.3)"
+    WORKFLOW_DEFINITION_VERSIONS ||--o{ WORKFLOW_STAGE_DEFS : "scopes stages to a version (v1.3)"
+    WORKFLOW_DEFINITION_VERSIONS ||--o{ WORKFLOW_INSTANCES : "instance pinned to version at start (v1.3)"
+    TRANSACTIONS ||--o{ WORKFLOW_INSTANCES : "drives"
+    WORKFLOW_INSTANCES ||--o{ WORKFLOW_ACTIONS : "logs"
+    WORKFLOW_STAGE_DEFS ||--o{ WORKFLOW_INSTANCES : "current_stage"
+    WORKFLOW_STAGE_DEFS ||--o{ WORKFLOW_ACTIONS : "stage"
+    USERS ||--o{ WORKFLOW_ACTIONS : "performed_by"
+
+    TRANSACTIONS ||--o{ PHYSICAL_CUSTODY_LOG : "tracks (standalone operator action, never inferred)"
+    DOCUMENTS ||--o{ PHYSICAL_CUSTODY_LOG : "document_id (v1.3.2 — WHICH physical document moved; populated from the moment the document is printed, see DOCUMENTS.physical_document_id note)"
+    TRANSACTIONS ||--o{ DOCUMENTS : "stores"
+    DOCUMENTS ||--o| DOCUMENTS : "replaced_by (versioning)"
+
+    TRANSACTIONS ||--o| REGISTRATION_DETAILS : "ATS/SaleDeed"
+    TRANSACTIONS ||--o| SCAN_CONFIRMATIONS : "ATS/SaleDeed"
+    TRANSACTIONS ||--o| SCAN_CHECKS : "ATS/SaleDeed"
+    TRANSACTIONS ||--o| CUSTOMER_HANDOVERS : "ATS/SaleDeed"
+    TRANSACTIONS ||--o| GARVI_DOWNLOADS : "SaleDeed only"
+
+    TRANSACTIONS ||--o{ CANCELLATIONS : "may request (requested_by)"
+    TRANSACTIONS ||--o{ UNIT_CHANGE_REQUESTS : "may request (old_transaction_id, requested_by)"
+    UNIT_CHANGE_REQUESTS |o--o| TRANSACTIONS : "new_transaction_id, once approved"
+    TRANSACTIONS ||--o{ CUSTOMER_CHANGE_REQUESTS : "IS the customer history (requested_by, approved_customer_name) — v1.3.1: never creates a new transaction"
+    WORKFLOW_INSTANCES ||--o{ WORKFLOW_REOPENS : "may be reopened"
+
+    USERS ||--o{ DELEGATIONS : "original_user"
+    USERS ||--o{ DELEGATIONS : "acting_user"
+    TRANSACTIONS ||--o{ INTERNAL_COMMENTS : "informal, does not move workflow"
+    USERS ||--o{ NOTIFICATIONS : "receives"
+    TRANSACTIONS ||--o{ AUDIT_LOG : "tracked in"
+    USERS ||--o{ AUDIT_LOG : "actor"
+
+    USERS {
+        uuid id PK
+        text name
+        text email
+        role_code role
+        text status
+    }
+    PROJECTS {
+        uuid id PK
+        text name
+        text code
+        text rera_number
+        bool direct_sale_deed_applicable
+    }
+    UNITS {
+        uuid id PK
+        uuid project_id FK
+        text unit_number
+        text unit_number_key
+        unit_status status
+    }
+    TRANSACTIONS {
+        uuid id PK
+        uuid unit_id FK
+        text customer_name
+        uuid crm_user_id FK
+        bool is_direct_sale_deed
+        transaction_lifecycle_status lifecycle_status "v1.3 — ACTIVE/CANCELLED/SUPERSEDED"
+        uuid source_transaction_id FK "Unit Change lineage ONLY (v1.3.2 — never Customer Change, never Cancellation+Rebooking)"
+        uuid previous_cancelled_transaction_id FK "v1.3.2, new — Cancellation+Rebooking link only"
+        text source_change_type "v1.3.1 — NULL or UNIT_CHANGE only, never CUSTOMER_CHANGE"
+        text status_workflow
+        text status_document
+        text status_financial
+        text status_handover
+        text status_overall
+    }
+    BOOKED_BY_MASTER {
+        uuid id PK
+        text name
+        text name_key "v1.3"
+        text type
+        bool active
+        uuid merged_into_id FK "v1.3"
+    }
+    BOOKED_BY_ALIASES {
+        uuid id PK
+        uuid booked_by_id FK
+        text alias_name
+    }
+    WORKFLOW_DEFINITIONS {
+        uuid id PK
+        workflow_type workflow_type
+        text name
+    }
+    WORKFLOW_DEFINITION_VERSIONS {
+        uuid id PK
+        uuid workflow_definition_id FK
+        int version_number
+        text status "DRAFT/ACTIVE/RETIRED"
+        bool is_immutable
+    }
+    WORKFLOW_INSTANCES {
+        uuid id PK
+        uuid transaction_id FK
+        workflow_type workflow_type
+        uuid workflow_definition_version_id FK "v1.3 — pinned at start"
+        uuid current_stage_id FK
+        text status
+    }
+    WORKFLOW_STAGE_DEFS {
+        uuid id PK
+        uuid workflow_definition_version_id FK "v1.3"
+        workflow_type workflow_type
+        int stage_order
+        text stage_key
+        role_code required_role
+    }
+    WORKFLOW_ACTIONS {
+        uuid id PK
+        uuid workflow_instance_id FK
+        uuid user_id FK
+        role_code nominal_role
+        role_code actual_role
+        text action
+        text remark "FORMAL — see INTERNAL_COMMENTS for informal"
+    }
+    DOCUMENTS {
+        uuid id PK
+        uuid transaction_id FK
+        document_type document_type "v1.3.2: incl. ATS_PRINT, SALE_DEED_PRINT"
+        text google_drive_file_id "v1.3.2: nullable for PRINT types"
+        uuid physical_document_id FK "v1.3.2, new — scan row links back to its print row"
+        int version
+    }
+    FINANCIAL_EXCEPTIONS {
+        uuid id PK
+        uuid transaction_id FK
+        financial_component component
+        text status
+    }
+    UNIT_CHANGE_REQUESTS {
+        uuid id PK
+        uuid old_transaction_id FK
+        uuid old_unit_id FK
+        uuid new_unit_id FK
+        uuid new_transaction_id FK
+        uuid requested_by FK "v1.3.1"
+        text reason "formal request remark"
+        text status
+    }
+    CUSTOMER_CHANGE_REQUESTS {
+        uuid id PK
+        uuid transaction_id FK
+        text existing_customer_name
+        text proposed_customer_name
+        text approved_customer_name "v1.3"
+        uuid requested_by FK "v1.3.1"
+        text reason "formal request remark"
+        uuid approved_by FK "v1.3"
+        text status
+    }
+    DELEGATIONS {
+        uuid id PK
+        uuid original_user_id FK
+        uuid acting_user_id FK
+        role_code nominal_role
+        role_code delegated_role
+        date start_date
+        date end_date
+        bool active
+    }
+    PHYSICAL_CUSTODY_LOG {
+        uuid id PK
+        uuid transaction_id FK
+        uuid document_id FK "v1.3.2 — WHICH physical document moved; a documents row (type ATS_PRINT/SALE_DEED_PRINT) exists from the moment the document is printed, so this is populated from the start, not only after scanning"
+        text workflow_type
+        role_code from_role
+        role_code to_role
+        text remark
+    }
+    CANCELLATIONS {
+        uuid id PK
+        uuid transaction_id FK
+        uuid requested_by FK
+        text reason "formal request remark"
+        bool financial_implications
+        text status
+    }
+    AUDIT_LOG {
+        uuid id PK
+        text entity_type
+        uuid entity_id
+        uuid user_id FK
+        role_code actual_role
+        role_code nominal_role
+        text action
+    }

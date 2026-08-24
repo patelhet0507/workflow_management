@@ -1,0 +1,30 @@
+stateDiagram-v2
+    [*] --> Requested: CRM raises Customer Change Request\n(existing_customer_name, proposed_customer_name, reason)
+
+    Requested --> Mgmt_Pending: submitted
+    Mgmt_Pending --> Approved: Management Approves
+    Mgmt_Pending --> Requested: Management Sends Back (remark mandatory)
+
+    Approved --> [*]: Current customer updated, full history retained
+
+    note right of Approved
+        On approval:
+        - customer_change_requests row itself becomes the
+          permanent history entry: approved_customer_name,
+          approved_by, approved_at are set and never edited
+          again (not just an audit-log side effect)
+        - transactions.customer_name updates to the approved
+          name, so the Control Sheet always shows the CURRENT
+          customer without a join
+        - GET /transactions/:id/customer-history returns every
+          row for this transaction, oldest first — a second or
+          third later change is just another permanent row,
+          fully navigable, nothing overwritten
+    end note
+
+    note left of Requested
+        If a further Customer Change happens later, it is a
+        NEW customer_change_requests row referencing the same
+        transaction — the chain of who owned this transaction,
+        when, and why, stays intact indefinitely.
+    end note
