@@ -17,6 +17,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     { href: "/bookings", label: "Bookings", icon: ClipboardList },
     ...(user?.role === "sales" || user?.role === "admin" || user?.role === "super_admin" ? [{ href: "/bookings/new", label: "New Booking", icon: Plus }] : []),
     { href: "/workflow-page", label: "Workflow Spec (v1.3.2)", icon: Shield },
+    { href: "/workflow-action", label: "Sale Deed Action (03)", icon: Shield },
     ...(user?.role === "admin" || user?.role === "super_admin" ? [{ href: "/admin", label: "Admin", icon: Shield }] : []),
   ]
 
