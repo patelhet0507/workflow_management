@@ -22,9 +22,10 @@ const FinancialDashboard = () => {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState({
-    saleDeedsCompleted: 14,
-    withFinancialExceptions: 6,
-    totalPendingAmount: 1840000,
+    total_bookings: 14,
+    completed: 8,
+    pending_approvals: 6,
+    rejected: 0,
   });
 
   useEffect(() => {
@@ -64,7 +65,7 @@ const FinancialDashboard = () => {
                   </div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Pending Amount</p>
                 </div>
-                <div className="text-3xl font-bold mt-1">{stats.totalPendingAmount.toLocaleString('en-IN')}</div>
+                <div className="text-3xl font-bold mt-1">{stats.completed}</div>
               </div>
 
               {/* Pending Amount by Component */}
