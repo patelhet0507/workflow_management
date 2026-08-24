@@ -5,10 +5,6 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth"
 import { ROLES } from "@/lib/constants"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Building2 } from "lucide-react"
 
 const roles = ROLES
@@ -19,7 +15,7 @@ export default function RegisterPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState("sales")
+  const [role, setRole] = useState("crm")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
@@ -38,28 +34,29 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 p-4">
-      <div className="w-full max-w-md p-8 rounded-xl bg-white dark:bg-gray-900 shadow-xl border dark:border-gray-800">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#F8F4E8] via-[#EDE6CE] to-[#F0E8D4] p-4 relative">
+      <div className="mesh-gradient" />
+      <div className="w-full max-w-md p-8 rounded-2xl glass-card relative z-10">
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center"><Building2 className="w-5 h-5 text-white" /></div>
-          <div><h1 className="text-lg font-bold">Create Account</h1><p className="text-xs text-gray-500">Join Real Estate CRM</p></div>
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#141623] to-[#1a1c2e] flex items-center justify-center border border-[#C5A05A]/20"><Building2 className="w-5 h-5 text-[#C5A05A]" /></div>
+          <div><h1 className="font-editorial text-xl text-[#141623]">Create Account</h1><p className="text-xs text-[#8A7E6E]">Join Real Estate CRM</p></div>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2"><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} required placeholder="Your full name" className="focus:ring-2 focus:ring-blue-500" /></div>
-          <div className="space-y-2"><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@example.com" className="focus:ring-2 focus:ring-blue-500" /></div>
-          <div className="space-y-2"><Label>Password</Label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} placeholder="Min 6 characters" className="focus:ring-2 focus:ring-blue-500" /></div>
-          <div className="space-y-2">
-            <Label>Role</Label>
+          <div className="space-y-1"><label className="text-xs font-bold text-[#8A7E6E] uppercase tracking-wider">Name</label><input value={name} onChange={(e) => setName(e.target.value)} required placeholder="Your full name" className="flex h-9 w-full rounded-xl border border-[#C5A05A]/20 bg-white/60 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A05A]/20" /></div>
+          <div className="space-y-1"><label className="text-xs font-bold text-[#8A7E6E] uppercase tracking-wider">Email</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@example.com" className="flex h-9 w-full rounded-xl border border-[#C5A05A]/20 bg-white/60 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A05A]/20" /></div>
+          <div className="space-y-1"><label className="text-xs font-bold text-[#8A7E6E] uppercase tracking-wider">Password</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} placeholder="Min 6 characters" className="flex h-9 w-full rounded-xl border border-[#C5A05A]/20 bg-white/60 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A05A]/20" /></div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-[#8A7E6E] uppercase tracking-wider">Role</label>
             <select value={role} onChange={(e) => setRole(e.target.value)}
-              className="flex h-9 w-full rounded-md border border-input bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-1 text-sm shadow-sm">
+              className="flex h-9 w-full rounded-xl border border-[#C5A05A]/20 bg-white/60 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A05A]/20">
               {roles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
             </select>
           </div>
-          {error && <p className="text-sm text-red-500 bg-red-50 dark:bg-red-950/50 px-3 py-2 rounded-md">{error}</p>}
-          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={loading}>{loading ? "Creating..." : "Register"}</Button>
+          {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-xl">{error}</p>}
+          <button type="submit" className="btn-luxury w-full text-xs uppercase tracking-widest" disabled={loading}>{loading ? "Creating..." : "Register"}</button>
         </form>
-        <p className="text-sm text-center mt-4 text-gray-500">
-          Already have an account? <Link href="/login" className="text-blue-600 hover:underline">Login</Link>
+        <p className="text-sm text-center mt-4 text-[#8A7E6E]">
+          Already have an account? <Link href="/login" className="text-[#8A6F3B] hover:text-[#141623] font-medium">Login</Link>
         </p>
       </div>
     </div>

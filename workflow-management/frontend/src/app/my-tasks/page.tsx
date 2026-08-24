@@ -5,127 +5,85 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import AppLayout from "@/components/app-layout";
-import { LayoutDashboard, ArrowRight } from "lucide-react";
+import { LayoutDashboard, Users } from "lucide-react";
 
 const MyTasks = () => {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [myTasks, setMyTasks] = useState([
-    {
-      project: "Trident Experia",
-      unit: "B-901",
-      customer: "Ojesh Agrawal",
-      document: "Sale Deed",
-      stage: "CFO Receipt Check",
-      dateReceived: "26 Jul",
-      daysPending: 2,
-      physicalHolder: "CFO",
-      action: "Open →"
-    },
-    {
-      project: "Trident Experia",
-      unit: "B-904",
-      customer: "M. Rao",
-      document: "ATS",
-      stage: "Ledger Check",
-      dateReceived: "27 Jul",
-      daysPending: 1,
-      physicalHolder: "CFO",
-      action: "Open →"
-    }
+    { project: "Trident Experia", unit: "B-901", customer: "Ojesh Agrawal", document: "Sale Deed", stage: "CFO Receipt Check", dateReceived: "26 Jul", daysPending: 2, physicalHolder: "CFO", action: "Open →" },
+    { project: "Trident Experia", unit: "B-904", customer: "M. Rao", document: "ATS", stage: "Ledger Check", dateReceived: "27 Jul", daysPending: 1, physicalHolder: "CFO", action: "Open →" }
   ]);
   const [pendingWithOthers, setPendingWithOthers] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) return void router.push("/login");
-    // Mock data loaded at initialization; real implementation would call api.getMyTasks
   }, [user, isLoading, router]);
 
   return (
-    <div className="min-h-screen bg-[#F4EEE0] text-[#1F2A3D]">
-      <div className="max-w-5xl mx-auto px-6 py-10">
+    <div className="min-h-screen bg-gradient-to-b from-[#F8F4E8] via-[#EDE6CE] to-[#F0E8D4] text-[#141623] relative">
+      <div className="mesh-gradient" />
+      <div className="max-w-6xl mx-auto px-6 py-10 relative z-10">
         <AppLayout>
-          <div className="max-w-4xl">
-            <h1 className="text-3xl font-bold mb-6 flex items-center gap-2">
-              <span className="w-1 h-6 bg-[#1F2A3D] rounded-full inline-block" />
-              <span>My Tasks</span>
-            </h1>
-            <div className="bg-white dark:bg-gray-900 p-5 rounded-xl shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center">
-                  <LayoutDashboard size={14} />
-                </div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">View toggle (§87)</p>
+          <div className="max-w-5xl space-y-8">
+            <div className="flex items-center gap-3">
+              <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#C5A05A]/20 to-[#8A6F3B]/10 flex items-center justify-center border border-[#C5A05A]/20"><Users size={16} className="text-[#8A6F3B]" /></span>
+              <h1 className="font-editorial text-4xl text-[#141623]">My Tasks</h1>
+            </div>
+
+            <div className="glass-card p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#C5A05A]/10 to-transparent flex items-center justify-center border border-[#C5A05A]/15"><LayoutDashboard size={14} className="text-[#8A6F3B]" /></span>
+                <p className="text-xs font-bold text-[#8A7E6E] uppercase tracking-widest">View toggle (§87)</p>
               </div>
-              <div className="flex items-center gap-4 mb-6">
-                <span className="chip bg-blue-50 text-blue-600 px-3 py-1 rounded text-xs font-medium">My Tasks ({myTasks.length})</span>
-                <button
-                  type="button"
-                  onClick={() => setPendingWithOthers(!pendingWithOthers)}
-                  className={`chip px-3 py-1 rounded text-xs font-medium ${pendingWithOthers ? 'bg-blue-50 text-blue-600' : 'bg-gray-300 text-gray-500'}`}
-                >
+              <div className="flex items-center gap-3 mb-6">
+                <span className="chip bg-gradient-to-r from-[#C5A05A]/15 to-[#C5A05A]/5 border border-[#C5A05A]/20 text-[#8A6F3B] px-3 py-1.5 rounded-full text-xs font-semibold">My Tasks ({myTasks.length})</span>
+                <button type="button" onClick={() => setPendingWithOthers(!pendingWithOthers)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${pendingWithOthers ? 'bg-gradient-to-r from-[#C5A05A]/15 to-[#C5A05A]/5 text-[#8A6F3B] border-[#C5A05A]/20' : 'bg-white/60 text-[#8A7E6E] border-[#C5A05A]/15'}`}>
                   Pending with Others
                 </button>
               </div>
 
-              <div className="bg-white dark:bg-gray-900 p-4 rounded-lg shadow-sm mb-6">
-                <p className="text-sm text-gray-500 mb-2">Task list (§86 columns)</p>
-                <table className="w-full text-sm text-[#1F2A3D]">
-                  <thead>
+              <div className="overflow-x-auto rounded-xl border border-[#EDE6CE]/60">
+                <table className="w-full text-sm text-[#141623]">
+                  <thead className="bg-gradient-to-r from-[#141623]/5 to-transparent">
                     <tr>
-                      <th className="p-2">Project</th>
-                      <th className="p-2">Unit</th>
-                      <th className="p-2">Customer</th>
-                      <th className="p-2">Document</th>
-                      <th className="p-2">Stage</th>
-                      <th className="p-2">Date Received</th>
-                      <th className="p-2">Days Pending</th>
-                      <th className="p-2">Physical Holder</th>
-                      <th className="p-2">Action</th>
+                      <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Project</th>
+                      <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Unit</th>
+                      <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Customer</th>
+                      <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Document</th>
+                      <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Stage</th>
+                      <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Date Received</th>
+                      <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Days</th>
+                      <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Physical Holder</th>
+                      <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="border-t border-[#E4DCC6]">
+                  <tbody className="divide-y divide-[#EDE6CE]/40">
                     {myTasks.map((task, index) => (
-                      <tr key={index} className="border-t border-[#F0EAD9]">
-                        <td className="p-2">{task.project}</td>
-                        <td className="p-2">{task.unit}</td>
-                        <td className="p-2">{task.customer}</td>
-                        <td className="p-2">{task.document}</td>
-                        <td className="p-2">{task.stage}</td>
-                        <td className="p-2">{task.dateReceived}</td>
-                        <td className="p-2">{task.daysPending}</td>
-                        <td className="p-2">{task.physicalHolder}</td>
-                        <td className="p-2">{task.action}</td>
+                      <tr key={index} className="hover:bg-[#C5A05A]/5 transition">
+                        <td className="p-3 text-xs">{task.project}</td>
+                        <td className="p-3 font-semibold">{task.unit}</td>
+                        <td className="p-3 text-sm">{task.customer}</td>
+                        <td className="p-3"><span className="text-xs px-2 py-0.5 rounded-full bg-[#C5A05A]/10 border border-[#C5A05A]/20 text-[#8A6F3B]">{task.document}</span></td>
+                        <td className="p-3 text-xs">{task.stage}</td>
+                        <td className="p-3 text-xs text-[#8A7E6E]">{task.dateReceived}</td>
+                        <td className="p-3 text-xs font-bold">{task.daysPending}</td>
+                        <td className="p-3 text-xs">{task.physicalHolder}</td>
+                        <td className="p-3"><span className="text-[#8A6F3B] text-xs font-medium border border-[#C5A05A]/20 px-2.5 py-1 rounded-full">Open →</span></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {pendingWithOthers && (
-                  <div className="bg-white dark:bg-gray-900 p-4 rounded-lg shadow-sm mt-4">
-                    <p className="text-sm text-gray-500 mb-2">"Pending with Others" example (§87)</p>
-                    <div className="chip bg-amber-50 text-amber-600 px-3 py-1 rounded text-xs font-medium">
-                      A-101 — Sale Deed — Pending with Legal Executive — 3 days
-                    </div>
-                  </div>
-                )}
-                <div className="text-xs text-gray-500 mt-2">
-                  v1.3 fix: "Date Received" was missing from this table in the prior wireframe — added per §86's full column set. It's the timestamp this stage became this user's responsibility, distinct from Days Pending (a derived count).
-                </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  My Tasks is scoped to stages this user's role (or an active delegation) can act on right now — same eligibility rule as the workflow action screen's role gate.
-                </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  Clicking any row opens the Workflow Action screen (Sheet 03) directly at that stage.
-                </div>
               </div>
 
-              <div className="legend mt-4">
-                <h3 className="text-sm font-semibold text-[#8C7A4D] mb-1">Notes</h3>
-                <ol className="list-disc pl-4 text-sm text-[#5B5340]">
-                  <li>My Tasks is scoped to stages this user's role (or an active delegation) can act on right now — same eligibility rule as the workflow action screen's role gate.</li>
-                  <li>Clicking any row opens the Workflow Action screen (Sheet 03) directly at that stage.</li>
-                </ol>
-              </div>
+              {pendingWithOthers && (
+                <div className="mt-4 p-4 rounded-xl bg-amber-50/60 border border-amber-200/60">
+                  <p className="text-xs font-bold text-[#8A7E6E] uppercase tracking-wider mb-2">"Pending with Others" (§87)</p>
+                  <span className="chip bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1 rounded-full text-xs font-medium">A-101 — Sale Deed — Pending with Legal Executive — 3 days</span>
+                </div>
+              )}
+              <p className="text-xs text-[#8A7E6E] mt-3 italic">My Tasks is scoped to stages this user's role (or an active delegation) can act on — same eligibility rule as the workflow action screen's role gate. Clicking any row opens the Workflow Action screen directly at that stage.</p>
             </div>
           </div>
         </AppLayout>

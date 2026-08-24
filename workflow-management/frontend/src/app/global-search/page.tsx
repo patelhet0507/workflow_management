@@ -11,18 +11,7 @@ const GlobalSearch = () => {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [searchParams, setSearchParams] = useState({
-    project: "",
-    unit: "",
-    customer: "",
-    crm: "",
-    bookedBy: "",
-    sourceOfBooking: "",
-    paymentPlan: "",
-    documentType: "",
-    sro: "",
-    registrationNumber: "",
-    currentStage: "",
-    registrationDate: "",
+    project: "", unit: "", customer: "", crm: "", bookedBy: "", sourceOfBooking: "", paymentPlan: "", documentType: "", sro: "", registrationNumber: "", currentStage: "", registrationDate: "",
   });
   const [results, setResults] = useState([
     { project: "Trident Experia", unit: "B-901", customer: "Ojesh Agrawal", crm: "Kevin Patel", currentStage: "CFO Receipt Check", registrationNo: "—" },
@@ -33,190 +22,71 @@ const GlobalSearch = () => {
   };
 
   const handleClear = () => {
-    setSearchParams({
-      project: "",
-      unit: "",
-      customer: "",
-      crm: "",
-      bookedBy: "",
-      sourceOfBooking: "",
-      paymentPlan: "",
-      documentType: "",
-      sro: "",
-      registrationNumber: "",
-      currentStage: "",
-      registrationDate: "",
-    });
+    setSearchParams({ project: "", unit: "", customer: "", crm: "", bookedBy: "", sourceOfBooking: "", paymentPlan: "", documentType: "", sro: "", registrationNumber: "", currentStage: "", registrationDate: "", });
   };
 
   return (
-    <div className="min-h-screen bg-[#F4EEE0] text-[#1F2A3D]">
-      <div className="max-w-5xl mx-auto px-6 py-10">
+    <div className="min-h-screen bg-gradient-to-b from-[#F8F4E8] via-[#EDE6CE] to-[#F0E8D4] text-[#141623] relative">
+      <div className="mesh-gradient" />
+      <div className="max-w-6xl mx-auto px-6 py-10 relative z-10">
         <AppLayout>
-          <div className="max-w-4xl">
-            <h1 className="text-3xl font-bold mb-6 flex items-center gap-2">
-              <span className="w-1 h-6 bg-[#1F2A3D] rounded-full inline-block" />
-              <span>Global Search</span>
-            </h1>
-
-            <div className="bg-white dark:bg-gray-900 p-5 rounded-xl shadow-sm ring-1 ring-gray-200 dark:ring-gray-800 mb-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center">
-                  <Search size={14} />
-                </div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Search fields (§88) — simple filter bar, not a new reporting module</p>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-4">
-                <input
-                  type="text"
-                  placeholder="Project ▾"
-                  value={searchParams.project}
-                  onChange={(e) => setSearchParams({ ...searchParams, project: e.target.value })}
-                  className="border border-[#CBBE9C] rounded px-2 py-1.5 text-sm bg-white"
-                />
-                <input
-                  type="text"
-                  placeholder="Unit"
-                  value={searchParams.unit}
-                  onChange={(e) => setSearchParams({ ...searchParams, unit: e.target.value })}
-                  className="border border-[#CBBE9C] rounded px-2 py-1.5 text-sm bg-white"
-                />
-                <input
-                  type="text"
-                  placeholder="Customer"
-                  value={searchParams.customer}
-                  onChange={(e) => setSearchParams({ ...searchParams, customer: e.target.value })}
-                  className="border border-[#CBBE9C] rounded px-2 py-1.5 text-sm bg-white"
-                />
-                <input
-                  type="text"
-                  placeholder="CRM ▾"
-                  value={searchParams.crm}
-                  onChange={(e) => setSearchParams({ ...searchParams, crm: e.target.value })}
-                  className="border border-[#CBBE9C] rounded px-2 py-1.5 text-sm bg-white"
-                />
-                <input
-                  type="text"
-                  placeholder="Booked By ▾"
-                  value={searchParams.bookedBy}
-                  onChange={(e) => setSearchParams({ ...searchParams, bookedBy: e.target.value })}
-                  className="border border-[#CBBE9C] rounded px-2 py-1.5 text-sm bg-white"
-                />
-                <input
-                  type="text"
-                  placeholder="Source of Booking ▾"
-                  value={searchParams.sourceOfBooking}
-                  onChange={(e) => setSearchParams({ ...searchParams, sourceOfBooking: e.target.value })}
-                  className="border border-[#CBBE9C] rounded px-2 py-1.5 text-sm bg-white"
-                />
-                <input
-                  type="text"
-                  placeholder="Payment Plan ▾"
-                  value={searchParams.paymentPlan}
-                  onChange={(e) => setSearchParams({ ...searchParams, paymentPlan: e.target.value })}
-                  className="border border-[#CBBE9C] rounded px-2 py-1.5 text-sm bg-white"
-                />
-                <input
-                  type="text"
-                  placeholder="Document Type ▾"
-                  value={searchParams.documentType}
-                  onChange={(e) => setSearchParams({ ...searchParams, documentType: e.target.value })}
-                  className="border border-[#CBBE9C] rounded px-2 py-1.5 text-sm bg-white"
-                />
-                <input
-                  type="text"
-                  placeholder="SRO"
-                  value={searchParams.sro}
-                  onChange={(e) => setSearchParams({ ...searchParams, sro: e.target.value })}
-                  className="border border-[#CBBE9C] rounded px-2 py-1.5 text-sm bg-white"
-                />
-                <input
-                  type="text"
-                  placeholder="Registration Number"
-                  value={searchParams.registrationNumber}
-                  onChange={(e) => setSearchParams({ ...searchParams, registrationNumber: e.target.value })}
-                  className="border border-[#CBBE9C] rounded px-2 py-1.5 text-sm bg-white"
-                />
-                <input
-                  type="text"
-                  placeholder="Current Stage ▾"
-                  value={searchParams.currentStage}
-                  onChange={(e) => setSearchParams({ ...searchParams, currentStage: e.target.value })}
-                  className="border border-[#CBBE9C] rounded px-2 py-1.5 text-sm bg-white"
-                />
-                <input
-                  type="date"
-                  placeholder="Registration Date"
-                  value={searchParams.registrationDate}
-                  onChange={(e) => setSearchParams({ ...searchParams, registrationDate: e.target.value })}
-                  className="border border-[#CBBE9C] rounded px-2 py-1.5 text-sm bg-white"
-                />
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleSearch}
-                  className="inline-flex items-center gap-1.5 bg-[#1F2A3D] text-[#F4EEE0] text-sm font-medium px-4 py-1.5 rounded hover:bg-[#2c3b56]"
-                >
-                  <Search size={14} /> Search
-                </button>
-                <button
-                  onClick={handleClear}
-                  className="inline-flex items-center gap-1.5 border-2 border-[#CBBE9C] text-[#A87C3F] text-sm font-medium px-4 py-1.5 rounded hover:bg-[#FBF8F0]"
-                >
-                  <Filter size={14} /> Clear
-                </button>
-              </div>
-
-              <div className="text-xs text-[#5B5340] mt-2">
-                Every field is optional and combinable — a CRM typing just a customer surname, or Legal Executive pasting a registration number, both work. This reuses the same filter/table visual language as the Dashboard and Reports screens, not a new component.
-              </div>
+          <div className="max-w-5xl space-y-8">
+            <div className="flex items-center gap-3">
+              <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#C5A05A]/20 to-[#8A6F3B]/10 flex items-center justify-center border border-[#C5A05A]/20"><Search size={16} className="text-[#8A6F3B]" /></span>
+              <h1 className="font-editorial text-4xl text-[#141623]">Global Search</h1>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 p-5 rounded-xl shadow-sm ring-1 ring-gray-200 dark:ring-gray-800">
+            <div className="glass-card p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center">
-                  <Search size={14} />
-                </div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Results — same shape as the Dashboard's unit-wise table, opens the Control Sheet on click</p>
+                <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#C5A05A]/10 to-transparent flex items-center justify-center border border-[#C5A05A]/15"><Search size={14} className="text-[#8A6F3B]" /></span>
+                <p className="text-xs font-bold text-[#8A7E6E] uppercase tracking-widest">Search fields (§88) — simple filter bar, not a new reporting module</p>
               </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-4">
+                {[
+                  ["project","Project"],["unit","Unit"],["customer","Customer"],["crm","CRM"],["bookedBy","Booked By"],["sourceOfBooking","Source"],["paymentPlan","Payment Plan"],["documentType","Document Type"],["sro","SRO"],["registrationNumber","Registration No."],["currentStage","Current Stage"]].map(([k,ph])=>(
+                  <input key={k} type="text" placeholder={ph as string} value={(searchParams as any)[k]} onChange={(e) => setSearchParams({ ...searchParams, [k]: e.target.value })} className="rounded-xl border border-[#C5A05A]/20 bg-white/60 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A05A]/20" />
+                ))}
+                <input type="date" value={searchParams.registrationDate} onChange={(e) => setSearchParams({ ...searchParams, registrationDate: e.target.value })} className="rounded-xl border border-[#C5A05A]/20 bg-white/60 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A05A]/20" />
+              </div>
+              <div className="flex items-center gap-3">
+                <button onClick={handleSearch} className="btn-luxury text-xs inline-flex items-center gap-1.5"><Search size={14} /> Search</button>
+                <button onClick={handleClear} className="border border-[#C5A05A]/20 text-[#8A6F3B] px-4 py-2 rounded-xl text-xs font-medium hover:bg-white/60 inline-flex items-center gap-1.5"><Filter size={14} /> Clear</button>
+              </div>
+              <p className="text-xs text-[#8A7E6E] mt-3">Every field is optional and combinable — a CRM typing just a customer surname, or Legal Executive pasting a registration number, both work.</p>
+            </div>
 
-              <table className="w-full text-sm text-[#1F2A3D]">
-                <thead>
-                  <tr>
-                    <th className="p-2">Project</th>
-                    <th className="p-2">Unit</th>
-                    <th className="p-2">Customer</th>
-                    <th className="p-2">CRM</th>
-                    <th className="p-2">Current Stage</th>
-                    <th className="p-2">Registration No.</th>
-                  </tr>
-                </thead>
-                <tbody className="border-t border-[#E4DCC6]">
-                  {results.map((result:any, index) => (
-                      <tr key={index} className="border-t border-[#F0EAD9] cursor-pointer hover:bg-[#FBF8F0]" onClick={()=> result.id && router.push(`/bookings/${result.id}`)}>
-                        <td className="p-2">{result.project}</td>
-                        <td className="p-2">{result.unit}</td>
-                        <td className="p-2">{result.customer}</td>
-                        <td className="p-2">{result.crm}</td>
-                        <td className="p-2">{result.currentStage}</td>
-                        <td className="p-2">{result.registrationNo}</td>
+            <div className="glass-card p-6 overflow-hidden">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#C5A05A]/10 to-transparent flex items-center justify-center border border-[#C5A05A]/15"><Search size={14} className="text-[#8A6F3B]" /></span>
+                <p className="text-xs font-bold text-[#8A7E6E] uppercase tracking-widest">Results — opens the Control Sheet on click</p>
+              </div>
+              <div className="overflow-x-auto rounded-xl border border-[#EDE6CE]/60">
+                <table className="w-full text-sm text-[#141623]">
+                  <thead className="bg-gradient-to-r from-[#141623]/5 to-transparent">
+                    <tr>
+                      <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Project</th>
+                      <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Unit</th>
+                      <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Customer</th>
+                      <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">CRM</th>
+                      <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Current Stage</th>
+                      <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Registration No.</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#EDE6CE]/40">
+                    {results.map((result:any, index) => (
+                      <tr key={index} className="hover:bg-[#C5A05A]/5 cursor-pointer transition" onClick={()=> result.id && router.push(`/bookings/${result.id}`)}>
+                        <td className="p-3 text-sm">{result.project}</td>
+                        <td className="p-3 font-semibold">{result.unit}</td>
+                        <td className="p-3 text-sm">{result.customer}</td>
+                        <td className="p-3 text-xs text-[#8A7E6E]">{result.crm}</td>
+                        <td className="p-3"><span className="text-xs px-2 py-0.5 rounded-full bg-[#C5A05A]/10 border border-[#C5A05A]/20 text-[#8A6F3B]">{result.currentStage}</span></td>
+                        <td className="p-3 text-xs">{result.registrationNo}</td>
                       </tr>
                     ))}
-                </tbody>
-              </table>
-
-              <div className="text-xs text-[#5B5340] mt-2">
-                This is deliberately a thin screen — one filter bar, one results table, click-through to the Control Sheet (Sheet 02). It is not the Reports screen (Sheet 09) and doesn't duplicate it: Search finds a specific transaction fast; Reports produces a filtered/exportable list for analysis.
+                  </tbody>
+                </table>
               </div>
-            </div>
-
-            <div className="legend mt-6">
-              <h3 className="text-sm font-semibold text-[#8C7A4D] mb-1">Notes</h3>
-              <ol className="list-disc pl-4 text-sm text-[#5B5340]">
-                <li>This is deliberately a thin screen — one filter bar, one results table, click-through to the Control Sheet (Sheet 02). It is not the Reports screen (Sheet 09) and doesn't duplicate it: Search finds a specific transaction fast; Reports produces a filtered/exportable list for analysis.</li>
-              </ol>
+              <p className="text-xs text-[#8A7E6E] mt-3 italic">Thin screen — one filter bar, one results table, click-through to the Control Sheet. Not the Reports screen.</p>
             </div>
           </div>
         </AppLayout>

@@ -6,11 +6,7 @@ import { useAuth } from "@/lib/auth"
 import { api, type UserData, type StageDef, type BookingFieldDef, FIELD_TYPES } from "@/lib/api"
 import { ROLES } from "@/lib/constants"
 import AppLayout from "@/components/app-layout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { ArrowUp, ArrowDown, Save, Plus, X } from "lucide-react"
+import { ArrowUp, ArrowDown, Save, Plus, X, ShieldCheck, Users } from "lucide-react"
 
 const roles = ROLES
 
@@ -21,13 +17,13 @@ export default function AdminPage() {
   const [newEmail, setNewEmail] = useState("")
   const [newName, setNewName] = useState("")
   const [newPassword, setNewPassword] = useState("")
-  const [newRole, setNewRole] = useState("sales")
+  const [newRole, setNewRole] = useState("crm")
   const [msg, setMsg] = useState("")
   const [flow, setFlow] = useState<StageDef[]>([])
   const [flowMsg, setFlowMsg] = useState("")
   const [saving, setSaving] = useState(false)
   const [newStageStatus, setNewStageStatus] = useState("")
-  const [newStageRole, setNewStageRole] = useState("sales")
+  const [newStageRole, setNewStageRole] = useState("crm")
 
   const [formFields, setFormFields] = useState<BookingFieldDef[]>([])
   const [formMsg, setFormMsg] = useState("")
@@ -126,168 +122,149 @@ export default function AdminPage() {
   if (isLoading || !user) return null
 
   return (
-    <AppLayout>
-      <div className="max-w-5xl">
-        <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-          <span className="w-1 h-6 bg-blue-600 rounded-full inline-block" />
-          Admin Panel
-        </h1>
-
-        <Card className="shadow-md border-0 ring-1 ring-gray-200 dark:ring-gray-800 mb-8">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-t-lg">
-            <CardTitle className="text-lg">Add User</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <form onSubmit={addUser} className="space-y-4 max-w-md">
-              <div className="space-y-1"><Label>Name</Label><Input value={newName} onChange={(e) => setNewName(e.target.value)} required placeholder="Full name" className="focus:ring-2 focus:ring-blue-500" /></div>
-              <div className="space-y-1"><Label>Email</Label><Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} required placeholder="user@example.com" className="focus:ring-2 focus:ring-blue-500" /></div>
-              <div className="space-y-1"><Label>Password</Label><Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} placeholder="Min 6 characters" className="focus:ring-2 focus:ring-blue-500" /></div>
-              <div className="space-y-2">
-                <Label>Role</Label>
-                <select value={newRole} onChange={(e) => setNewRole(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-1 text-sm shadow-sm">
-                  {roles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-                </select>
-              </div>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">Add User</Button>
-              {msg && <p className="text-sm text-blue-600 bg-blue-50 dark:bg-blue-950/50 px-3 py-2 rounded-md">{msg}</p>}
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-md border-0 ring-1 ring-gray-200 dark:ring-gray-800 mb-8">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-t-lg">
-            <CardTitle className="text-lg">Approval Flow</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <p className="text-sm text-gray-500 mb-4">Add, remove, or reorder approval stages. Each stage maps a booking status to the role that can approve it.</p>
-
-            <div className="flex items-end gap-2 mb-6 max-w-lg">
-              <div className="flex-1 space-y-1">
-                <Label className="text-xs">Status Name</Label>
-                <Input value={newStageStatus} onChange={(e) => setNewStageStatus(e.target.value)} placeholder="e.g. compliance_approved" className="focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Approved By</Label>
-                <select value={newStageRole} onChange={(e) => setNewStageRole(e.target.value)}
-                  className="flex h-9 w-32 rounded-md border border-input bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-1 text-sm shadow-sm">
-                  {roles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-                </select>
-              </div>
-              <Button onClick={addStage} size="sm" className="mb-0.5 bg-blue-600 hover:bg-blue-700"><Plus className="w-4 h-4 mr-1" /> Add</Button>
+    <div className="min-h-screen bg-gradient-to-b from-[#F8F4E8] via-[#EDE6CE] to-[#F0E8D4] text-[#141623] relative">
+      <div className="mesh-gradient" />
+      <div className="max-w-6xl mx-auto px-6 py-10 relative z-10">
+        <AppLayout>
+          <div className="max-w-5xl space-y-8">
+            <div className="flex items-center gap-3">
+              <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#C5A05A]/20 to-[#8A6F3B]/10 flex items-center justify-center border border-[#C5A05A]/20"><ShieldCheck size={16} className="text-[#8A6F3B]" /></span>
+              <h1 className="font-editorial text-4xl text-[#141623]">Admin Panel</h1>
             </div>
 
-            <div className="space-y-2 max-w-lg">
-              {flow.map((s, i) => (
-                <div key={s.status} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700">
-                  <span className="text-xs font-bold text-gray-400 w-5">{i + 1}.</span>
-                  <div className="flex-1">
-                    <span className="text-sm font-medium">{s.status.replace(/_/g, " ")}</span>
-                    <span className="text-xs text-gray-400 mx-2">→</span>
-                    <span className="text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded">{s.role}</span>
-                  </div>
-                  <div className="flex gap-1">
-                    <button onClick={() => moveStage(i, -1)} disabled={i === 0} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30"><ArrowUp className="w-4 h-4" /></button>
-                    <button onClick={() => moveStage(i, 1)} disabled={i === flow.length - 1} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30"><ArrowDown className="w-4 h-4" /></button>
-                    <button onClick={() => removeStage(i)} className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-950/50 text-gray-400 hover:text-red-600"><X className="w-4 h-4" /></button>
-                  </div>
+            <div className="glass-card p-6">
+              <div className="flex items-center gap-2 mb-4"><span className="w-1 h-5 bg-gradient-to-b from-[#C5A05A] to-[#8A6F3B] rounded-full" /><h2 className="font-editorial text-xl text-[#141623]">Add User</h2></div>
+              <form onSubmit={addUser} className="space-y-4 max-w-md">
+                <div className="space-y-1"><label className="text-xs font-bold text-[#8A7E6E] uppercase tracking-wider">Name</label><input value={newName} onChange={(e) => setNewName(e.target.value)} required placeholder="Full name" className="flex h-9 w-full rounded-xl border border-[#C5A05A]/20 bg-white/60 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A05A]/20" /></div>
+                <div className="space-y-1"><label className="text-xs font-bold text-[#8A7E6E] uppercase tracking-wider">Email</label><input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} required placeholder="user@example.com" className="flex h-9 w-full rounded-xl border border-[#C5A05A]/20 bg-white/60 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A05A]/20" /></div>
+                <div className="space-y-1"><label className="text-xs font-bold text-[#8A7E6E] uppercase tracking-wider">Password</label><input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} placeholder="Min 6 characters" className="flex h-9 w-full rounded-xl border border-[#C5A05A]/20 bg-white/60 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A05A]/20" /></div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#8A7E6E] uppercase tracking-wider">Role</label>
+                  <select value={newRole} onChange={(e) => setNewRole(e.target.value)}
+                    className="flex h-9 w-full rounded-xl border border-[#C5A05A]/20 bg-white/60 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A05A]/20">
+                    {roles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                  </select>
                 </div>
-              ))}
+                <button type="submit" className="btn-luxury text-xs uppercase tracking-widest">Add User</button>
+                {msg && <p className="text-sm text-[#8A6F3B] bg-[#C5A05A]/10 border border-[#C5A05A]/20 px-3 py-2 rounded-xl">{msg}</p>}
+              </form>
             </div>
-            <div className="flex items-center gap-3 mt-4">
-              <Button onClick={saveFlow} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
-                <Save className="w-4 h-4 mr-1.5" /> {saving ? "Saving..." : "Save Flow"}
-              </Button>
-              {flowMsg && <p className="text-sm text-blue-600">{flowMsg}</p>}
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card className="shadow-md border-0 ring-1 ring-gray-200 dark:ring-gray-800 mb-8">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-t-lg">
-            <CardTitle className="text-lg">Booking Form Fields</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <p className="text-sm text-gray-500 mb-4">Add, remove, or reorder the fields shown on the New Booking form. Each field can be marked required.</p>
-
-            <div className="flex items-end gap-2 mb-6 max-w-lg">
-              <div className="flex-1 space-y-1">
-                <Label className="text-xs">Field Label</Label>
-                <Input value={newFieldLabel} onChange={(e) => setNewFieldLabel(e.target.value)} placeholder="e.g. PAN Number" className="focus:ring-2 focus:ring-blue-500" />
+            <div className="glass-card p-6">
+              <div className="flex items-center gap-2 mb-2"><span className="w-1 h-5 bg-gradient-to-b from-[#C5A05A] to-[#8A6F3B] rounded-full" /><h2 className="font-editorial text-xl text-[#141623]">Approval Flow</h2></div>
+              <p className="text-sm text-[#8A7E6E] mb-4">Add, remove, or reorder approval stages. Each stage maps a booking status to the role that can approve it.</p>
+              <div className="flex items-end gap-2 mb-6 max-w-lg">
+                <div className="flex-1 space-y-1">
+                  <label className="text-xs font-bold text-[#8A7E6E] uppercase tracking-wider">Status Name</label>
+                  <input value={newStageStatus} onChange={(e) => setNewStageStatus(e.target.value)} placeholder="e.g. compliance_approved" className="flex h-9 w-full rounded-xl border border-[#C5A05A]/20 bg-white/60 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A05A]/20" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#8A7E6E] uppercase tracking-wider">Approved By</label>
+                  <select value={newStageRole} onChange={(e) => setNewStageRole(e.target.value)}
+                    className="flex h-9 w-32 rounded-xl border border-[#C5A05A]/20 bg-white/60 px-3 py-1 text-sm">
+                    {roles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                  </select>
+                </div>
+                <button onClick={addStage} className="btn-luxury text-xs py-2 px-3 inline-flex items-center gap-1"><Plus className="w-4 h-4" /> Add</button>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Type</Label>
-                <select value={newFieldType} onChange={(e) => setNewFieldType(e.target.value as BookingFieldDef["type"])}
-                  className="flex h-9 w-36 rounded-md border border-input bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-1 text-sm shadow-sm">
-                  {FIELD_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
+              <div className="space-y-2 max-w-lg">
+                {flow.map((s, i) => (
+                  <div key={s.status} className="flex items-center gap-3 p-3 bg-white/60 rounded-xl border border-[#C5A05A]/15">
+                    <span className="text-xs font-bold text-[#8A7E6E] w-5">{i + 1}.</span>
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-[#141623]">{s.status.replace(/_/g, " ")}</span>
+                      <span className="text-xs text-[#8A7E6E] mx-2">→</span>
+                      <span className="text-xs font-medium text-[#8A6F3B] bg-[#C5A05A]/10 border border-[#C5A05A]/20 px-2 py-0.5 rounded-full">{s.role}</span>
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={() => moveStage(i, -1)} disabled={i === 0} className="p-1 rounded-lg hover:bg-[#C5A05A]/10 disabled:opacity-30"><ArrowUp className="w-4 h-4 text-[#8A7E6E]" /></button>
+                      <button onClick={() => moveStage(i, 1)} disabled={i === flow.length - 1} className="p-1 rounded-lg hover:bg-[#C5A05A]/10 disabled:opacity-30"><ArrowDown className="w-4 h-4 text-[#8A7E6E]" /></button>
+                      <button onClick={() => removeStage(i)} className="p-1 rounded-lg hover:bg-red-50 text-[#8A7E6E] hover:text-red-600"><X className="w-4 h-4" /></button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <Button onClick={addField} size="sm" className="mb-0.5 bg-blue-600 hover:bg-blue-700"><Plus className="w-4 h-4 mr-1" /> Add</Button>
+              <div className="flex items-center gap-3 mt-4">
+                <button onClick={saveFlow} disabled={saving} className="btn-luxury text-xs inline-flex items-center gap-1.5"><Save className="w-4 h-4" /> {saving ? "Saving..." : "Save Flow"}</button>
+                {flowMsg && <p className="text-sm text-[#8A6F3B]">{flowMsg}</p>}
+              </div>
             </div>
 
-            <div className="space-y-2 max-w-3xl">
-              {formFields.map((f, i) => (
-                <div key={i} className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700">
-                  <span className="text-xs font-bold text-gray-400 w-5">{i + 1}.</span>
-                  <Input value={f.label} onChange={(e) => updateField(i, { label: e.target.value, key: e.target.value ? slugify(e.target.value) : f.key })} className="flex-1 h-8 focus:ring-2 focus:ring-blue-500" />
-                  <select value={f.type} onChange={(e) => updateField(i, { type: e.target.value as BookingFieldDef["type"] })}
-                    className="h-8 w-32 rounded border border-input bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2 text-xs">
+            <div className="glass-card p-6">
+              <div className="flex items-center gap-2 mb-2"><span className="w-1 h-5 bg-gradient-to-b from-[#C5A05A] to-[#8A6F3B] rounded-full" /><h2 className="font-editorial text-xl text-[#141623]">Booking Form Fields</h2></div>
+              <p className="text-sm text-[#8A7E6E] mb-4">Add, remove, or reorder the fields shown on the New Booking form.</p>
+              <div className="flex items-end gap-2 mb-6 max-w-lg">
+                <div className="flex-1 space-y-1">
+                  <label className="text-xs font-bold text-[#8A7E6E] uppercase tracking-wider">Field Label</label>
+                  <input value={newFieldLabel} onChange={(e) => setNewFieldLabel(e.target.value)} placeholder="e.g. PAN Number" className="flex h-9 w-full rounded-xl border border-[#C5A05A]/20 bg-white/60 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A05A]/20" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#8A7E6E] uppercase tracking-wider">Type</label>
+                  <select value={newFieldType} onChange={(e) => setNewFieldType(e.target.value as BookingFieldDef["type"])}
+                    className="flex h-9 w-36 rounded-xl border border-[#C5A05A]/20 bg-white/60 px-3 py-1 text-sm">
                     {FIELD_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
-                  {f.type === "select" && (
-                    <Input value={(f.options || []).join(", ")} onChange={(e) => updateField(i, { options: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })}
-                      placeholder="options, comma, separated" className="w-44 h-8 text-xs focus:ring-2 focus:ring-blue-500" />
-                  )}
-                  <label className="flex items-center gap-1.5 text-xs whitespace-nowrap">
-                    <input type="checkbox" checked={!!f.required} onChange={(e) => updateField(i, { required: e.target.checked })} />
-                    Required
-                  </label>
-                  <button onClick={() => moveField(i, -1)} disabled={i === 0} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30"><ArrowUp className="w-4 h-4" /></button>
-                  <button onClick={() => moveField(i, 1)} disabled={i === formFields.length - 1} className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30"><ArrowDown className="w-4 h-4" /></button>
-                  <button onClick={() => setFormFields(formFields.filter((_, j) => j !== i))} className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-950/50 text-gray-400 hover:text-red-600"><X className="w-4 h-4" /></button>
                 </div>
-              ))}
+                <button onClick={addField} className="btn-luxury text-xs py-2 px-3 inline-flex items-center gap-1"><Plus className="w-4 h-4" /> Add</button>
+              </div>
+              <div className="space-y-2 max-w-3xl">
+                {formFields.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2 p-3 bg-white/60 rounded-xl border border-[#C5A05A]/15">
+                    <span className="text-xs font-bold text-[#8A7E6E] w-5">{i + 1}.</span>
+                    <input value={f.label} onChange={(e) => updateField(i, { label: e.target.value, key: e.target.value ? slugify(e.target.value) : f.key })} className="flex-1 h-8 rounded-xl border border-[#C5A05A]/20 bg-white/60 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A05A]/20" />
+                    <select value={f.type} onChange={(e) => updateField(i, { type: e.target.value as BookingFieldDef["type"] })}
+                      className="h-8 w-32 rounded-xl border border-[#C5A05A]/20 bg-white/60 px-2 text-xs">
+                      {FIELD_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    </select>
+                    {f.type === "select" && (
+                      <input value={(f.options || []).join(", ")} onChange={(e) => updateField(i, { options: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })}
+                        placeholder="options, comma, separated" className="w-44 h-8 rounded-xl border border-[#C5A05A]/20 bg-white/60 px-2 text-xs" />
+                    )}
+                    <label className="flex items-center gap-1.5 text-xs whitespace-nowrap text-[#8A7E6E]">
+                      <input type="checkbox" checked={!!f.required} onChange={(e) => updateField(i, { required: e.target.checked })} className="accent-[#C5A05A]" />
+                      Required
+                    </label>
+                    <button onClick={() => moveField(i, -1)} disabled={i === 0} className="p-1 rounded-lg hover:bg-[#C5A05A]/10 disabled:opacity-30"><ArrowUp className="w-4 h-4" /></button>
+                    <button onClick={() => moveField(i, 1)} disabled={i === formFields.length - 1} className="p-1 rounded-lg hover:bg-[#C5A05A]/10 disabled:opacity-30"><ArrowDown className="w-4 h-4" /></button>
+                    <button onClick={() => setFormFields(formFields.filter((_, j) => j !== i))} className="p-1 rounded-lg hover:bg-red-50 text-[#8A7E6E] hover:text-red-600"><X className="w-4 h-4" /></button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-3 mt-4">
+                <button onClick={saveForm} disabled={saving} className="btn-luxury text-xs inline-flex items-center gap-1.5"><Save className="w-4 h-4" /> {saving ? "Saving..." : "Save Form"}</button>
+                {formMsg && <p className="text-sm text-[#8A6F3B]">{formMsg}</p>}
+              </div>
             </div>
-            <div className="flex items-center gap-3 mt-4">
-              <Button onClick={saveForm} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
-                <Save className="w-4 h-4 mr-1.5" /> {saving ? "Saving..." : "Save Form"}
-              </Button>
-              {formMsg && <p className="text-sm text-blue-600">{formMsg}</p>}
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card className="shadow-md border-0 ring-1 ring-gray-200 dark:ring-gray-800">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-t-lg">
-            <CardTitle className="text-lg">Users ({users.length})</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead><tr className="border-b dark:border-gray-800">
-                  <th className="text-left p-2 font-medium text-gray-500">Name</th>
-                  <th className="text-left p-2 font-medium text-gray-500">Email</th>
-                  <th className="text-left p-2 font-medium text-gray-500">Role</th>
-                </tr></thead>
-                <tbody>
-                  {users.map((u) => (
-                    <tr key={u.id} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                      <td className="p-2 font-medium">{u.name}</td>
-                      <td className="p-2 text-gray-500">{u.email}</td>
-                      <td className="p-2">
-                        <select value={u.role} onChange={(e) => changeRole(u.id, e.target.value)}
-                          className="h-8 rounded border border-input bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2 text-xs">
-                          {roles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-                        </select>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="glass-card p-6">
+              <div className="flex items-center gap-2 mb-4"><Users size={16} className="text-[#8A6F3B]" /><h2 className="font-editorial text-xl text-[#141623]">Users ({users.length})</h2></div>
+              <div className="overflow-x-auto rounded-xl border border-[#EDE6CE]/60">
+                <table className="w-full text-sm">
+                  <thead className="bg-gradient-to-r from-[#141623]/5 to-transparent"><tr>
+                    <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Name</th>
+                    <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Email</th>
+                    <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Role</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-[#EDE6CE]/40">
+                    {users.map((u) => (
+                      <tr key={u.id} className="hover:bg-[#C5A05A]/5">
+                        <td className="p-3 font-medium text-[#141623]">{u.name}</td>
+                        <td className="p-3 text-[#8A7E6E] text-xs">{u.email}</td>
+                        <td className="p-3">
+                          <select value={u.role} onChange={(e) => changeRole(u.id, e.target.value)}
+                            className="h-8 rounded-xl border border-[#C5A05A]/20 bg-white/60 px-2 text-xs">
+                            {roles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </AppLayout>
       </div>
-    </AppLayout>
+    </div>
   )
 }

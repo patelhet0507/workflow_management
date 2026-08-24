@@ -8,7 +8,7 @@ import { api } from "@/lib/api"
 import { statusLabel } from "@/lib/constants"
 import AppLayout from "@/components/app-layout"
 import { Badge } from "@/components/ui/badge"
-import { Search, Plus } from "lucide-react"
+import { Search, Plus, ClipboardList } from "lucide-react"
 
 const statusColors: Record<string, "default" | "secondary" | "success" | "destructive" | "outline"> = {
   completed: "success", rejected: "destructive", archived: "secondary",
@@ -29,52 +29,68 @@ export default function BookingsPage() {
 
   const filtered = bookings.filter((b) =>
     b.client_name?.toLowerCase().includes(search.toLowerCase()) ||
-    b.project_name?.toLowerCase().includes(search.toLowerCase())
+    b.project_name?.toLowerCase().includes(search.toLowerCase()) ||
+    b.unit_no?.toLowerCase().includes(search.toLowerCase())
   )
 
   return (
-    <AppLayout>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <span className="w-1 h-6 bg-blue-600 rounded-full inline-block" />
-          Bookings
-        </h1>
-        {(user.role === "sales" || user.role === "admin" || user.role === "super_admin") && (
-          <Link href="/bookings/new" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md text-sm font-medium bg-blue-600 text-white shadow hover:bg-blue-700 transition-colors">
-            <Plus className="w-4 h-4" /> New Booking
-          </Link>
-        )}
+    <div className="min-h-screen bg-gradient-to-b from-[#F8F4E8] via-[#EDE6CE] to-[#F0E8D4] text-[#141623] relative">
+      <div className="mesh-gradient" />
+      <div className="max-w-6xl mx-auto px-6 py-10 relative z-10">
+        <AppLayout>
+          <div className="max-w-5xl space-y-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#C5A05A]/20 to-[#8A6F3B]/10 flex items-center justify-center border border-[#C5A05A]/20">
+                  <ClipboardList size={16} className="text-[#8A6F3B]" />
+                </span>
+                <h1 className="font-editorial text-4xl text-[#141623]">Bookings</h1>
+              </div>
+              {(user.role === "sales" || user.role === "crm" || user.role === "admin" || user.role === "super_admin") && (
+                <Link href="/bookings/new" className="btn-luxury inline-flex items-center gap-1.5 text-xs uppercase tracking-widest">
+                  <Plus className="w-4 h-4" /> New Allocation
+                </Link>
+              )}
+            </div>
+
+            <div className="glass-card p-5">
+              <div className="relative max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#C5A05A]" />
+                <input type="text" placeholder="Search by customer, project or unit..." value={search} onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 flex h-9 w-full rounded-xl border border-[#C5A05A]/20 bg-white/60 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#C5A05A]/20" />
+              </div>
+            </div>
+
+            <div className="glass-card p-0 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gradient-to-r from-[#141623]/5 to-transparent"><tr>
+                    <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Customer</th>
+                    <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Project · Unit</th>
+                    <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Status</th>
+                    <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Lifecycle</th>
+                    <th className="text-left p-3 font-semibold text-[#8A7E6E] text-xs uppercase tracking-wider">Plan</th>
+                    <th className="text-left p-3"></th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-[#EDE6CE]/60">
+                    {filtered.map((b) => (
+                      <tr key={b.id} className="hover:bg-[#C5A05A]/5 transition-colors">
+                        <td className="p-3 font-medium text-[#141623]">{b.client_name} {b.is_direct_sale_deed && <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">Direct</span>}{b.previous_cancelled_transaction_id && <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Rebooking</span>}</td>
+                        <td className="p-3 text-[#5B5340] text-xs">{b.project_name} · <span className="font-semibold text-[#141623]">{b.unit_no}</span></td>
+                        <td className="p-3"><Badge variant={statusColors[b.status] || "outline"}>{statusLabel(b.status)}</Badge></td>
+                        <td className="p-3"><span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${b.lifecycle_status==="CANCELLED"?"bg-red-50 text-red-700 border-red-200": b.lifecycle_status==="SUPERSEDED"?"bg-amber-50 text-amber-700 border-amber-200":"bg-emerald-50 text-emerald-700 border-emerald-200"}`}>{b.lifecycle_status||"ACTIVE"}</span></td>
+                        <td className="p-3 text-[#8A7E6E] text-xs">{b.payment_plan || "-"}</td>
+                        <td className="p-3"><Link href={`/bookings/${b.id}`} className="text-[#8A6F3B] hover:text-[#141623] text-xs font-medium border border-[#C5A05A]/20 px-2.5 py-1 rounded-full hover:bg-[#C5A05A]/10 transition">View →</Link></td>
+                      </tr>
+                    ))}
+                    {filtered.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-[#8A7E6E] text-sm">No bookings found — create the first Allocation.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </AppLayout>
       </div>
-      <div className="relative mb-4 max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input type="text" placeholder="Search by customer or project..." value={search} onChange={(e) => setSearch(e.target.value)}
-          className="pl-9 flex h-9 w-full rounded-md border border-gray-200 dark:border-gray-700 bg-transparent px-3 py-1 text-sm shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-      </div>
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm ring-1 ring-gray-200 dark:ring-gray-800 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 dark:bg-gray-800/50"><tr>
-            <th className="text-left p-3 font-medium text-gray-500">Customer</th>
-            <th className="text-left p-3 font-medium text-gray-500">Project · Unit</th>
-            <th className="text-left p-3 font-medium text-gray-500">Status</th>
-            <th className="text-left p-3 font-medium text-gray-500">Lifecycle</th>
-            <th className="text-left p-3 font-medium text-gray-500">Plan</th>
-            <th className="text-left p-3 font-medium text-gray-500"></th>
-          </tr></thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {filtered.map((b) => (
-              <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
-                <td className="p-3 font-medium">{b.client_name} {b.is_direct_sale_deed && <span className="ml-1 text-[10px] px-1 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">Direct</span>}{b.previous_cancelled_transaction_id && <span className="ml-1 text-[10px] px-1 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">Rebooking</span>}</td>
-                <td className="p-3 text-gray-600 dark:text-gray-400">{b.project_name} · {b.unit_no}</td>
-                <td className="p-3"><Badge variant={statusColors[b.status] || "outline"}>{statusLabel(b.status)}</Badge></td>
-                <td className="p-3 text-xs">{b.lifecycle_status||"ACTIVE"}</td>
-                <td className="p-3 text-gray-600 dark:text-gray-400">{b.payment_plan || "-"}</td>
-                <td className="p-3"><Link href={`/bookings/${b.id}`} className="text-blue-600 hover:text-blue-700 text-xs font-medium">View →</Link></td>
-              </tr>
-            ))}
-            {filtered.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-gray-400">No bookings found</td></tr>}
-          </tbody>
-        </table>
-      </div>
-    </AppLayout>
+    </div>
   )
 }
